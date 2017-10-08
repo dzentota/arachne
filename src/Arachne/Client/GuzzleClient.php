@@ -1,0 +1,124 @@
+<?php
+
+namespace Arachne\Client;
+
+use Arachne\Gateway\Localhost;
+use Arachne\Identity\IdentityRotator;
+use GuzzleHttp\ClientInterface as GuzzleInterface;
+use GuzzleHttp\Cookie\CookieJar;
+use GuzzleHttp\Exception\RequestException;
+use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\ResponseInterface;
+use Arachne\Exceptions\HttpRequestException;
+use Arachne\Identity\Identity;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+
+/**
+ * Class GuzzleClient
+ * @package Arachne\Client
+ *
+ *    $config = [
+ *       'allow_redirects' => [
+ *           'max' => 5,
+ *           'protocols' => ['http', 'https'],
+ *           'strict' => false,
+ *       ],
+ *       'http_errors' => true,
+ *       'decode_content' => true,
+ *       'verify' => true,
+ *       'connect_timeout' => 3.14,
+ *       'timeout' => 3.14
+ *   ];
+ *
+ */
+class GuzzleClient extends GenericClient
+{
+    /**
+     * @var GuzzleInterface
+     */
+    private $httpClient;
+
+    /**
+     * GuzzleClient constructor.
+     * @param EventDispatcherInterface $eventDispatcher
+     * @param IdentityRotator $identityRotator
+     * @param GuzzleInterface|null $client
+     */
+    public function __construct(EventDispatcherInterface $eventDispatcher, IdentityRotator $identityRotator, GuzzleInterface $client = null)
+    {
+        parent::__construct($eventDispatcher, $identityRotator);
+        $this->httpClient = $client;
+    }
+
+    /**
+     * @return \GuzzleHttp\Client|GuzzleInterface|null
+     */
+    public function getHttpClient()
+    {
+        return $this->httpClient?? new \GuzzleHttp\Client(['cookies' => true, 'http_errors' => false]);
+    }
+
+    /**
+     * @param GuzzleInterface $httpClient
+     * @return $this
+     */
+    public function setHttpClient(GuzzleInterface $httpClient)
+    {
+        $this->httpClient = $httpClient;
+        return $this;
+    }
+
+    /**
+     * @param array $requestConfig
+     * @param $identity
+     * @return mixed
+     */
+    protected function prepareConfig(array $requestConfig, Identity $identity): array
+    {
+        $config['allow_redirects']['referer'] = $requestConfig['allow_redirects']['referer']??
+            $identity->isSendReferer();
+        $config['headers'] = $requestConfig['headers']??
+            $identity->getDefaultRequestHeaders();
+        $config['headers']['User-Agent'] = $requestConfig['headers']['User-Agent']??
+            $identity->getUserAgent();
+        $proxy = $identity->getGateway()->getGatewayServer();
+        if (!($proxy instanceof Localhost)) {
+            $config['proxy'] = (string) $proxy;
+        }
+        $config['cookies'] = $requestConfig['cookies']?? ($identity->areCookiesEnabled() ? new CookieJar() : false);
+        return $config;
+    }
+
+    /**
+     * @param $identity
+     */
+    protected function ensureIdentityIsCompatibleWithClient(Identity $identity)
+    {
+        if ($identity->isJSEnabled()) {
+            throw new \LogicException('Guzzle client does NOT support JS');
+        }
+    }
+
+    /**
+     * @param RequestInterface $request
+     * @param array $config
+     * @return ResponseInterface
+     * @throws HttpRequestException
+     */
+    protected function sendHTTPRequest(
+        RequestInterface $request,
+        array $config
+    ): ResponseInterface {
+        try {
+            $httpClient = $this->getHttpClient();
+            $response = $httpClient
+                ->send($request, $config);
+        } catch (RequestException $exception) {
+            if ($exception->hasResponse()) {
+                $this->getIdentityRotator()->evaluateResult($exception->getResponse());
+            }
+            throw new HttpRequestException('Failed to send HTTP Request', 0, $exception);
+        }
+        return $response;
+    }
+}

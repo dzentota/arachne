@@ -2,6 +2,8 @@
 
 namespace Arachne\Service;
 
+use Arachne\Gateway\GatewayProfile;
+use Arachne\Identity\IdentityRotatorInterface;
 use Gaufrette\Filesystem;
 use Http\Message\RequestFactory;
 use Http\Message\ResponseFactory;
@@ -12,12 +14,6 @@ use Arachne\Document\Manager;
 use Arachne\Filter\FilterInterface;
 use Arachne\Frontier\FrontierInterface;
 use Arachne\Identity\IdentitiesCollection;
-use Arachne\Proxy\ProxiesCollection;
-use Arachne\Proxy\ProxyProfile;
-use Arachne\Proxy\ProxyRotator;
-use Arachne\Proxy\ProxyRotatorInterface;
-use Arachne\Proxy\SwitchableIdentityProxyInterface;
-use Arachne\Request\RequestManager;
 use Arachne\Scheduler;
 use Arachne\Arachne;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
@@ -84,23 +80,16 @@ abstract class Factory
     abstract public function filesystem() : Filesystem;
 
     /**
-     * @return ProxiesCollection ;
-     */
-    abstract public function proxiesList() : ProxiesCollection;
-
-    /**
      * @return IdentitiesCollection
      */
     abstract public function identities() : IdentitiesCollection;
 
     /**
-     * @return ProxyRotatorInterface
+     * @return IdentityRotatorInterface
      */
-    abstract public function proxyRotator() : ProxyRotatorInterface;
+    abstract public function identityRotator() : IdentityRotatorInterface;
 
-    abstract public function ownServer() : SwitchableIdentityProxyInterface;
-
-    abstract public function proxyProfile() : ProxyProfile;
+    abstract public function gatewayProfile() : GatewayProfile;
 
     /**
      * @return Factory
@@ -119,8 +108,6 @@ abstract class Factory
     }
 
     abstract function scheduler() : Scheduler;
-
-    abstract function requestManager(): RequestManager;
 
     abstract function eventDispatcher(): EventDispatcherInterface;
 }

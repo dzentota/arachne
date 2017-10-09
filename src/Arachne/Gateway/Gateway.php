@@ -50,7 +50,7 @@ class Gateway implements GatewayInterface
      */
     private $totalRequests = 0;
 
-    public function __construct(EventDispatcherInterface $eventDispatcher, GatewayServer $gatewayServer, GatewayProfile $gatewayProfile = null)
+    public function __construct(EventDispatcherInterface $eventDispatcher, GatewayServerInterface $gatewayServer, GatewayProfile $gatewayProfile = null)
     {
         $this->eventDispatcher = $eventDispatcher;
         $this->gatewayServer = $gatewayServer;
@@ -278,9 +278,9 @@ class Gateway implements GatewayInterface
     }
 
     /**
-     * @return GatewayServer
+     * @return GatewayServerInterface
      */
-    public function getGatewayServer(): GatewayServer
+    public function getGatewayServer(): GatewayServerInterface
     {
         return $this->gatewayServer;
     }

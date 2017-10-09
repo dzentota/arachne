@@ -37,8 +37,8 @@ interface GatewayInterface
      */
     public function unblock();
     /**
-     * @return GatewayServer
+     * @return GatewayServerInterface
      */
-    public function getGatewayServer() : GatewayServer ;
+    public function getGatewayServer() : GatewayServerInterface ;
 
 }

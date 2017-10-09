@@ -4,7 +4,6 @@ namespace Arachne\Frontier;
 
 use Psr\Log\LoggerInterface;
 use Arachne\BatchResource;
-use Arachne\Resource;
 
 /**
  * Class FrontierLogger
@@ -40,7 +39,7 @@ class FrontierLogger implements FrontierInterface
      */
     public function populate(\Serializable $item, int $priority = self::PRIORITY_NORMAL)
     {
-        $this->logger->debug(sprintf('Populating Frontier with %s Resource [%s], % priority',
+        $this->logger->debug(sprintf('Populating Frontier with %s Resource [%s], %s priority',
             ($item instanceof BatchResource? 'Batch' : 'Single'),
             ($item instanceof BatchResource? $item->count() . ' resources' : $item->getUrl()),
             ($priority === self::PRIORITY_NORMAL ? '"normal"' : '"high"')));

@@ -3,7 +3,7 @@
 namespace Arachne\Client;
 
 use Arachne\Gateway\Localhost;
-use Arachne\Identity\IdentityRotator;
+use Arachne\Identity\IdentityRotatorInterface;
 use GuzzleHttp\ClientInterface as GuzzleInterface;
 use GuzzleHttp\Cookie\CookieJar;
 use GuzzleHttp\Exception\RequestException;
@@ -41,10 +41,10 @@ class GuzzleClient extends GenericClient
     /**
      * GuzzleClient constructor.
      * @param EventDispatcherInterface $eventDispatcher
-     * @param IdentityRotator $identityRotator
+     * @param IdentityRotatorInterface $identityRotator
      * @param GuzzleInterface|null $client
      */
-    public function __construct(EventDispatcherInterface $eventDispatcher, IdentityRotator $identityRotator, GuzzleInterface $client = null)
+    public function __construct(EventDispatcherInterface $eventDispatcher, IdentityRotatorInterface $identityRotator, GuzzleInterface $client = null)
     {
         parent::__construct($eventDispatcher, $identityRotator);
         $this->httpClient = $client;

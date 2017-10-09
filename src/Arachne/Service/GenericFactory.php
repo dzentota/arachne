@@ -2,6 +2,11 @@
 
 namespace Arachne\Service;
 
+use Arachne\Gateway\Gateway;
+use Arachne\Gateway\GatewayProfile;
+use Arachne\Gateway\GatewayServer;
+use Arachne\Identity\IdentityRotatorInterface;
+use Arachne\Identity\RoundRobinIdentityRotator;
 use Gaufrette\Adapter\Local;
 use Gaufrette\Filesystem;
 use GuzzleHttp\Client;
@@ -36,13 +41,6 @@ use Arachne\Frontier\FrontierLogger;
 use Arachne\Frontier\InMemory as InMemoryFrontier;
 use Arachne\Identity\IdentitiesCollection;
 use Arachne\Identity\Identity;
-use Arachne\Proxy\NullProxy;
-use Arachne\Proxy\ProxiesCollection;
-use Arachne\Proxy\ProxyProfile;
-use Arachne\Proxy\ProxyRotatorInterface;
-use Arachne\Proxy\RandomProxyRotator;
-use Arachne\Proxy\SwitchableIdentityProxyInterface;
-use Arachne\Request\RequestManager;
 use Arachne\Scheduler;
 use Arachne\Arachne;
 use Symfony\Component\EventDispatcher\EventDispatcher;
@@ -63,28 +61,17 @@ class GenericFactory extends Factory
         return $frontier;
     }
 
-    /**
-     * @return ProxiesCollection ;
-     */
-    public function proxiesList(): ProxiesCollection
+    public function gatewayProfile(): GatewayProfile
     {
-        $identities = $this->getContainer()->identities();
-        $proxy = new NullProxy($this->getContainer()->eventDispatcher(), $identities);
-        return new ProxiesCollection($proxy);
+        return new GatewayProfile();
     }
-
-    public function proxyRotator(): ProxyRotatorInterface
-    {
-        $proxies = $this->getContainer()->proxiesList();
-        $eventDispatcher = $this->getContainer()->eventDispatcher();
-        return new RandomProxyRotator($eventDispatcher, $proxies);
-    }
-
 
     public function identities(): IdentitiesCollection
     {
+        $gatewayServer = GatewayServer::localhost();
+        $gateway = new Gateway($this->getContainer()->eventDispatcher(), $gatewayServer, $this->gatewayProfile());
         $defaultUserAgent = \Campo\UserAgent::random();
-        $identity = new Identity($defaultUserAgent);
+        $identity = new Identity($gateway, $defaultUserAgent);
         return new IdentitiesCollection($identity);
     }
 
@@ -97,10 +84,14 @@ class GenericFactory extends Factory
         $httpClient = $this->createHttpClient();
         $eventDispatcher = $this->getContainer()->eventDispatcher();
         $client = new GuzzleClient($eventDispatcher,
-            $this->getContainer()->requestManager(), $httpClient);
+            $this->identityRotator(), $httpClient);
         return new ClientLogger($client, $logger);
     }
 
+    public function identityRotator(): IdentityRotatorInterface
+    {
+        return new RoundRobinIdentityRotator($this->getContainer()->identities());
+    }
     /**
      * @return DocumentInterface
      */
@@ -173,25 +164,6 @@ class GenericFactory extends Factory
     {
         return new Scheduler($this->getContainer()->frontier(), $this->getContainer()->filter(),
             $this->getContainer()->logger());
-    }
-
-    public function ownServer(): SwitchableIdentityProxyInterface
-    {
-        return new NullProxy($this->getContainer()->eventDispatcher(), $this->identities());
-    }
-
-    public function proxyProfile(): ProxyProfile
-    {
-        return new ProxyProfile();
-    }
-
-    public function requestManager(): RequestManager
-    {
-        return new RequestManager(
-            $this->getContainer()->ownServer(),
-            $this->getContainer()->proxyRotator(),
-            $this->getContainer()->proxyProfile()
-        );
     }
 
     /**
@@ -284,4 +256,5 @@ class GenericFactory extends Factory
         });
         return $dispatcher;
     }
+
 }

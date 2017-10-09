@@ -6,6 +6,10 @@ use Gaufrette\Filesystem;
 use Arachne\Resource;
 use Psr\Log\LoggerInterface;
 
+/**
+ * Class Gaufrette
+ * @package Arachne\BlobsStorage
+ */
 class Gaufrette implements BlobsStorageInterface
 {
     /**
@@ -28,6 +32,9 @@ class Gaufrette implements BlobsStorageInterface
      */
     private $useHashFilename;
 
+    /**
+     * @var LoggerInterface
+     */
     private $logger;
 
     /**
@@ -54,7 +61,13 @@ class Gaufrette implements BlobsStorageInterface
         return $this->indexFileName;
     }
 
-
+    /**
+     * Gaufrette constructor.
+     * @param LoggerInterface $logger
+     * @param Filesystem $filesystem
+     * @param bool $useHashFilename
+     * @param string $indexFileName
+     */
     public function __construct(LoggerInterface $logger, Filesystem $filesystem, bool $useHashFilename = false, $indexFileName = 'index.dat')
     {
         $this->logger = $logger;
@@ -63,6 +76,10 @@ class Gaufrette implements BlobsStorageInterface
         $this->indexFileName = $indexFileName;
     }
 
+    /**
+     * @param Resource $resource
+     * @return string
+     */
     protected function getPath(Resource $resource)
     {
         $url = $resource->getHttpRequest()->getUri();
@@ -147,7 +164,7 @@ class Gaufrette implements BlobsStorageInterface
     public function write(Resource $resource, string $contents = '', bool $overwrite = true)
     {
         $path = $this->getPath($resource);
-        $this->logger->debug(sprintf('Writing %s bytes into %s', $this->strlen($contents), $path));
+        $this->logger->debug(sprintf('Saving blob resource [%s] to [%s]', $resource->getUrl(), $path));
         $this->getFilesystem()->write($path, $contents, $overwrite);
         return $path;
     }
@@ -159,7 +176,7 @@ class Gaufrette implements BlobsStorageInterface
     public function read(Resource $resource)
     {
         $path = $this->getPath($resource);
-        $this->logger->debug(sprintf('Reading %s from the Blobs Storage', $path));
+        $this->logger->debug(sprintf('Reading [%s] from the Blobs Storage', $path));
         return $this->getFilesystem()->read($path);
     }
 
@@ -170,7 +187,7 @@ class Gaufrette implements BlobsStorageInterface
     public function exists(Resource $resource)
     {
         $path = $this->getPath($resource);
-        $this->logger->debug('Checking if %s exists in Blobs Storage');
+        $this->logger->debug(sprintf('Checking if [%s] exists in Blobs Storage',$path));
         return $this->getFilesystem()->has($path);
     }
 
@@ -181,8 +198,8 @@ class Gaufrette implements BlobsStorageInterface
     public function delete(Resource $resource)
     {
         $path = $this->getPath($resource);
-        $this->logger->debug('Deleting %s from the Blobs Storage');
-        $this->getFilesystem()->delete($path);
+        $this->logger->debug(sprintf('Deleting [%s] from the Blobs Storage', $path));
+        return $this->getFilesystem()->delete($path);
     }
 
     /**

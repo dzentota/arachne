@@ -2,7 +2,7 @@
 
 namespace Arachne\Client;
 
-use Arachne\Identity\IdentityRotator;
+use Arachne\Identity\IdentityRotatorInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Arachne\Client\Events\RequestPrepared;
@@ -24,9 +24,9 @@ abstract class GenericClient implements ClientInterface
     /**
      * GuzzleClient constructor.
      * @param EventDispatcherInterface $eventDispatcher
-     * @param IdentityRotator $identityRotator
+     * @param IdentityRotatorInterface $identityRotator
      */
-    public function __construct(EventDispatcherInterface $eventDispatcher, IdentityRotator $identityRotator)
+    public function __construct(EventDispatcherInterface $eventDispatcher, IdentityRotatorInterface $identityRotator)
     {
         $this->eventDispatcher = $eventDispatcher;
         $this->identityRotator = $identityRotator;

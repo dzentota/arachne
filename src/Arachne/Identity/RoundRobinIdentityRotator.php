@@ -27,7 +27,7 @@ class RoundRobinIdentityRotator extends IdentityRotator
                     /** @var Identity $currentIdentity */
                     $currentIdentity = parent::current();
                     $gateway = $currentIdentity->getGateway();
-                    return $gateway->isUsableFor($this->currentRequest);
+                    return isset($this->currentRequest)? $gateway->isUsableFor($this->currentRequest) : true;
                 }
             }
         );

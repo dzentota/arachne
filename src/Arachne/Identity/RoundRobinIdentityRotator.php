@@ -32,6 +32,7 @@ class RoundRobinIdentityRotator extends IdentityRotator
             }
         );
         $this->identitiesList->rewind();
+        $this->currentIdentity = $this->identitiesList->current();
     }
 
     public function switchIdentityFor(RequestInterface $request)

@@ -11,8 +11,8 @@ class IdentitiesCollection extends GenericCollection
         $this->values = $identities;
     }
 
-    public function add(Identity ...$proxies)
+    public function add(Identity ...$identities)
     {
-        $this->values = array_merge($this->values, $proxies);
+        $this->values = array_merge($this->values, $identities);
     }
 }

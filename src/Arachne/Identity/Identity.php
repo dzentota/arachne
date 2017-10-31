@@ -150,48 +150,13 @@ class Identity
     public function __toString()
     {
         $data = [
+            'Gateway' => (string)$this->getGateway()->getGatewayServer(),
             'User Agent' => $this->getUserAgent(),
             'Default Request Headers' => $this->getDefaultRequestHeaders(),
-            'Enable Cookies?' => $this->areCookiesEnabled()? 'Yes' : 'No',
-            'Enable JavaScript?' => $this->isJSEnabled()? 'Yes' : 'No',
-            'Send Referer?' => $this->isSendReferer()? 'Yes' : 'No'
+            'Enable Cookies?' => $this->areCookiesEnabled() ? 'Yes' : 'No',
+            'Enable JavaScript?' => $this->isJSEnabled() ? 'Yes' : 'No',
+            'Send Referer?' => $this->isSendReferer() ? 'Yes' : 'No'
         ];
-        return json_encode($data,  JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-    }
-
-    public function isApplicableTo(string $url): bool
-    {
-        if (empty($this->gatewayProfile)) {
-            return false;
-        }
-        $whiteList = $this->gatewayProfile->getWhiteList();
-        $blackList = $this->gatewayProfile->getBlackList();
-        switch (true) {
-            case !empty($whiteList) && !empty($blackList):
-                $whiteListMatch = false;
-                $blackListMatch = false;
-                foreach ($whiteList as $regExp) {
-                    if (preg_match("~$regExp~is", $url)) {
-                        $whiteListMatch = true;
-                        break;
-                    }
-                }
-                foreach ($blackList as $regExp) {
-                    if (preg_match("~$regExp~is", $url)) {
-                        $blackListMatch = true;
-                        break;
-                    }
-                }
-                return $whiteListMatch && !$blackListMatch;
-            case !empty($whiteList) && empty($blackList):
-                foreach ($whiteList as $regExp) {
-                    if (preg_match("~$regExp~is", $url)) {
-                        return true;
-                    }
-                }
-                return false;
-            default:
-                return false;
-        }
+        return json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
     }
 }

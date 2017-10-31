@@ -27,7 +27,7 @@
         "campo/random-user-agent": "^1.2",
         "symfony/event-dispatcher": "^3.3@dev",
         "jmikola/wildcard-event-dispatcher": "~1.0",
-        "textalk/websocket": "1.0.*"
+        "dzentota/chrome-dev-tools": "dev-master"
     },
     "require-dev": {
         "phpunit/phpunit": "5.7.*"

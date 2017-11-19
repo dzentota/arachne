@@ -75,6 +75,7 @@ class GuzzleClient extends GenericClient
      */
     protected function prepareConfig(array $requestConfig, Identity $identity): array
     {
+        $config = $this->httpClient->getConfig();
         $config['allow_redirects']['referer'] = $requestConfig['allow_redirects']['referer']??
             $identity->isSendReferer();
         $config['headers'] = $requestConfig['headers']??

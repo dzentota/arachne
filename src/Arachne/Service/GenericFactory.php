@@ -178,7 +178,14 @@ class GenericFactory extends Factory
         $client = new Client([
             'handler' => $stack,
             'connect_timeout' => 5,
-            'timeout' => 5
+            'timeout' => 5,
+            'http_errors' => false,
+            'allow_redirects' => [
+                'max' => 5,
+                'protocols' => ['http', 'https'],
+                'strict' => false,
+                'track_redirects' => true,
+            ],
         ]);
         return $client;
     }

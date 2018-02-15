@@ -208,7 +208,7 @@ class Arachne
         }
         if (!empty($config['frontier'])) {
             if (!is_array($config['frontier']) && (!$config['frontier'] instanceof \Traversable)) {
-                throw new \InvalidArgumentException(sprintf('frontier param must to be an array, "%s" given',
+                throw new \InvalidArgumentException(sprintf('frontier param must be an array, "%s" given',
                     gettype($config['frontier'])));
             }
             foreach ($config['frontier'] as $resourceConfig) {
@@ -364,7 +364,7 @@ class Arachne
                     if (isset($oldData['blobs'])) {
                         $blobs = $oldData['blobs'];
                     }
-                    $blobs[md5($resource->getUrl())] = $path;
+                    $blobs[md5($resource->getUrl())] = ['path' => $path, 'origUrl' => $resource->getUrl()];
                     $this->docManager->updateDocument(
                         $itemType, $itemId,
                         ['blobs' => $blobs]

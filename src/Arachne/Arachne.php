@@ -18,7 +18,8 @@ use Arachne\Frontier\FrontierInterface;
  */
 class Arachne
 {
-    private $reschedulePreviouslyFailedResources = true;
+    public $reschedulePreviouslyFailedResources = true;
+    public $shutdownOnException = false;
 
     private $failedResources = [];
     /**
@@ -131,13 +132,11 @@ class Arachne
         } catch (ParsingResponseException $exception) {
             $this->logger->critical('Got Exception during parsing the Response from ' . $resource->getUrl());
             $this->logger->critical('Exception message: ' . $exception->getMessage());
-            $this->scheduler->getFrontier()->populate($resource, FrontierInterface::PRIORITY_HIGH);
-            $this->shutdown();
+            $this->handleException($resource, $response, $exception);
         } catch (\Exception $exception) {
             $this->logger->critical('Got Exception during sending the Request ' . $resource->getUrl());
             $this->logger->critical('Exception message: ' . $exception->getMessage());
-            $this->failedResources[] = $resource;
-            $this->shutdown();
+            $this->handleException($resource, $response, $exception);
         } finally {
             if ($handler = $this->getAlwaysHandler($resource->getType())) {
                 try {
@@ -146,10 +145,37 @@ class Arachne
                 } catch (\Exception $exception) {
                     $this->logger->critical(sprintf('Failed to handle resource %s. Reason: %s', $resource->getUrl(),
                         $exception->getMessage()));
-                    $this->shutdown();
+                    $this->handleException($resource, $response, $exception);
                 }
             }
         }
+    }
+
+    protected function handleException (
+        Resource $resource,
+        ResponseInterface $response = null,
+        \Exception $exception = null
+    ) {
+        if ($handler = $this->getExceptionHandler($resource->getType())) {
+            try {
+                $handler($response, $resource, $exception);
+                $this->logger->debug(sprintf('Handler of Exception [%s] has been called. Resource %s ',
+                    $exception->getMessage(), $resource->getUrl()));
+            } catch (\Exception $e) {
+                $this->logger->error(sprintf('Failed to handle Exception. Resource %s. Reason: %s', $resource->getUrl(),
+                    $e->getMessage()));
+            }
+        }
+        $this->shutdownOnException && $this->shutdown();
+    }
+
+    /**
+     * @param string $type
+     * @return null|callable
+     */
+    protected function getExceptionHandler(string $type)
+    {
+        return $this->handlers[$type]['exception']?? null;
     }
 
     /**
@@ -389,6 +415,7 @@ class Arachne
                     $e->getMessage()));
             }
         }
+        $this->shutdownOnException && $this->shutdown();
     }
 
     protected function handleHttpSuccess(Resource $resource, ResponseInterface $response = null)

@@ -44,9 +44,10 @@ $container->get()
             $content = (string)$response->getBody();
             $crawler = new DomCrawler($content);
             $crawler->filter('item')
-                ->reduce(function (DomCrawler $node, $i) {
-                    return $i < 3;
-                })->each(function (DomCrawler $node) use (&$data) {
+//                ->reduce(function (DomCrawler $node, $i) {
+//                    return $i < 3;
+//                })
+                ->each(function (DomCrawler $node) use (&$data) {
                     $data[] = [
                         'link' => $node->filter('link')->text(),
                         'title' => $node->filter('title')->text(),
@@ -63,7 +64,7 @@ $container->get()
                 $resultSet->addResource('page', $link, $item);//bind resource to Item by passing third argument
                 $resultSet->addResource('image', $image, $item);
             }
-//            $resultSet->packInBatch();
+            $resultSet->packInBatch();
         },
         'success:page' => function (ResponseInterface $response, ResultSet $resultSet) {
             $content = (new DomCrawler((string)$response->getBody()))->filter('.news-text')->html();

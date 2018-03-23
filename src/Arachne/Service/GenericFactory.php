@@ -169,7 +169,7 @@ class GenericFactory extends Factory
     /**
      * @return Client
      */
-    protected function createHttpClient()
+    public function createHttpClient()
     {
         $logger = $this->getContainer()->logger();
         $stack = HandlerStack::create(new CurlHandler());

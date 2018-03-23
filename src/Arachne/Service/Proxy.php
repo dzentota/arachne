@@ -16,7 +16,7 @@ class Proxy
     public function __call($method, $arguments)
     {
         if (!isset($this->pool[$method])) {
-            $this->pool[$method] = $this->serviceFactory->$method();
+            $this->pool[$method] = call_user_func_array([$this->serviceFactory, $method], $arguments);//$this->serviceFactory->$method();
         }
         return $this->pool[$method];
     }

@@ -2,6 +2,8 @@
 
 namespace Arachne;
 
+use Arachne\Client\GuzzleClient;
+use GuzzleHttp\Pool;
 use Http\Message\RequestFactory;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -88,7 +90,7 @@ class Arachne
         $this->scheduler = $scheduler;
         $this->docManager = $docManager;
         $this->requestFactory = $requestFactory;
-        register_shutdown_function(function() use ($scheduler) {
+        register_shutdown_function(function () use ($scheduler) {
             if ($this->reschedulePreviouslyFailedResources && count($this->failedResources)) {
                 $this->logger->debug('Rescheduling failed resources for the next run');
                 foreach ($this->failedResources as $failedResource) {
@@ -126,7 +128,7 @@ class Arachne
         } catch (HttpRequestException $exception) {
             $this->logger->error('Got Exception during sending the Request ' . $resource->getUrl());
             $this->logger->error('Exception message: ' . ($exception->getPrevious() ?
-                $exception->getPrevious()->getMessage() : $exception->getMessage()));
+                    $exception->getPrevious()->getMessage() : $exception->getMessage()));
             $this->failedResources[] = $resource;
             $this->handleHttpFail($resource, $response, $exception);
         } catch (ParsingResponseException $exception) {
@@ -151,7 +153,7 @@ class Arachne
         }
     }
 
-    protected function handleException (
+    protected function handleException(
         Resource $resource,
         ResponseInterface $response = null,
         \Exception $exception = null
@@ -255,39 +257,7 @@ class Arachne
                     $this->processSingeItem($item);
                 }
                 if ($item instanceof BatchResource) {
-                    $wp = new \QXS\WorkerPool\WorkerPool();
-                    $batchSize = $this->getWorkerPoolSize() ?: $item->count();
-                    $wp->setWorkerPoolSize($batchSize)
-                        ->create(new \QXS\WorkerPool\ClosureWorker(
-                            /**
-                             * @param mixed $input the input from the WorkerPool::run() Method
-                             * @param \QXS\WorkerPool\Semaphore $semaphore the semaphore to synchronize calls accross all workers
-                             * @param \ArrayObject $storage a persistent storage for the current child process
-                             */
-                                function ($item, $semaphore, $storage) {
-                                    //https://jira.mongodb.org/browse/PHPC-625
-                                    //When using pcntl_fork() with the new MongoDB\Driver it is impossible to create a new
-                                    // MongoDB manager in the child process if one has been opened in the parent process.
-                                    //the newly created on in the child process seem to share a socket to MongoDB and throw
-                                    // errors based on receiving each others responses.
-//                                $filter = $this->getFilter();
-//                                $frontier = $this->getFrontier();
-//                                $resultsStorage = $this->getResultsStorage();
-//                                foreach ([$filter, $frontier, $resultsStorage] as $_) {
-//                                    if (is_callable([$_, 'setManager'])) {
-//                                        $_->setManager(new \MongoDB\Driver\Manager("mongodb://localhost:27017/?x=" . posix_getpid()));
-//                                    }
-//                                }
-                                    $this->processSingeItem($item);
-                                    return $item;
-                                }
-                            )
-                        );
-                    /** @var  $item \Arachne\BatchResource */
-                    foreach ($item->getResources() as $resource) {
-                        $wp->run($resource);
-                    }
-                    $wp->waitForAllWorkers(); // wait for all workers
+                    $this->processBatch($item);
                 }
             }
             $this->logger->debug('No more Items to process');
@@ -456,6 +426,49 @@ class Arachne
     {
         $this->logger->debug('Shutting down');
         die();
+    }
+
+    /**
+     * @param $batch
+     */
+    protected function processBatch(BatchResource $batch)
+    {
+        // @attention !!! You can not bind one Resource to another by passing thrid parameter to
+        // $resultSet->addResource(...) if you use InMemory adapter
+        //
+        $wp = new \QXS\WorkerPool\WorkerPool();
+        $batchSize = $this->getWorkerPoolSize() ?: $batch->count();
+        $wp->setWorkerPoolSize($batchSize)
+            ->create(new \QXS\WorkerPool\ClosureWorker(
+                /**
+                 * @param mixed $input the input from the WorkerPool::run() Method
+                 * @param \QXS\WorkerPool\Semaphore $semaphore the semaphore to synchronize calls accross all workers
+                 * @param \ArrayObject $storage a persistent storage for the current child process
+                 */
+                    function ($item, $semaphore, $storage) {
+                        //https://jira.mongodb.org/browse/PHPC-625
+                        //When using pcntl_fork() with the new MongoDB\Driver it is impossible to create a new
+                        // MongoDB manager in the child process if one has been opened in the parent process.
+                        //the newly created on in the child process seem to share a socket to MongoDB and throw
+                        // errors based on receiving each others responses.
+//                                $filter = $this->getFilter();
+//                                $frontier = $this->getFrontier();
+//                                $resultsStorage = $this->getResultsStorage();
+//                                foreach ([$filter, $frontier, $resultsStorage] as $_) {
+//                                    if (is_callable([$_, 'setManager'])) {
+//                                        $_->setManager(new \MongoDB\Driver\Manager("mongodb://localhost:27017/?x=" . posix_getpid()));
+//                                    }
+//                                }
+                        $this->processSingeItem($item);
+                        return $item;
+                    }
+                )
+            );
+        /** @var  $batch \Arachne\BatchResource */
+        foreach ($batch->getResources() as $resource) {
+            $wp->run($resource);
+        }
+        $wp->waitForAllWorkers(); // wait for all workers
     }
 
 }

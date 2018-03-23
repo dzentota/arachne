@@ -129,6 +129,28 @@ class ResultSet
     }
 
     /**
+     * @param Resource $newResource
+     * @param Item|null $item
+     * @param int $priority
+     */
+    public function addNewResource(Resource $newResource, Item $item = null, $priority = FrontierInterface::PRIORITY_NORMAL)
+    {
+        if (empty($item)) {
+            $this->newResources[$priority][] = $newResource;
+        } else {
+            $newResource->addMeta(
+                [
+                    'related_type' => $item->type,
+                    'related_id' => $item->id,
+                    'related_url' => $this->resource->getUrl()
+                ]
+            );
+            $this->relatedResources[$priority][] = $newResource;
+        }
+    }
+
+
+    /**
      * @param Item $item
      * @return $this
      */

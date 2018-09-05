@@ -74,7 +74,7 @@ class Manager
 
 
     /**
-     * @param \Arachne\Resource|Resource $resource
+     * @param \Arachne\Resource $resource
      * @param $docType
      * @param $docId
      */
@@ -83,6 +83,10 @@ class Manager
         $resource->setMeta(['item_id' => $docId, 'item_type' => $docType]);
     }
 
+    /**
+     * @param \Arachne\Resource $resource
+     * @return bool
+     */
     public function isBoundToDoc(Resource $resource)
     {
         return $resource->getMeta('item_id', false) && $resource->getMeta('item_type', false);

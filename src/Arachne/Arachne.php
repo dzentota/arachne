@@ -2,8 +2,6 @@
 
 namespace Arachne;
 
-use Arachne\Client\GuzzleClient;
-use GuzzleHttp\Pool;
 use Http\Message\RequestFactory;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -138,6 +136,7 @@ class Arachne
         } catch (\Exception $exception) {
             $this->logger->critical('Got Exception during sending the Request ' . $resource->getUrl());
             $this->logger->critical('Exception message: ' . $exception->getMessage());
+            $this->failedResources[] = $resource;
             $this->handleException($resource, $response, $exception);
         } finally {
             if ($handler = $this->getAlwaysHandler($resource->getType())) {

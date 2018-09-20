@@ -17,7 +17,7 @@ abstract class GenericClient implements ClientInterface
     /**
      * @var EventDispatcherInterface
      */
-    private $eventDispatcher;
+    protected $eventDispatcher;
 
     private $identityRotator;
 
@@ -44,12 +44,13 @@ abstract class GenericClient implements ClientInterface
             $this->eventDispatcher->dispatch(ResponseReceived::name, new ResponseReceived($request, $response));
             $this->identityRotator->evaluateResult($response);
         } catch (\Exception $exception) {
+            $this->getIdentityRotator()->evaluateResult(null);
             throw new HttpRequestException('Failed to send HTTP Request', 0, $exception);
         }
         return $response;
     }
 
-    public function getIdentityRotator()
+    public function getIdentityRotator(): IdentityRotatorInterface
     {
         return $this->identityRotator;
     }

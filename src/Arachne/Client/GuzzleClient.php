@@ -2,6 +2,7 @@
 
 namespace Arachne\Client;
 
+use Arachne\Client\Events\ResponseReceived;
 use Arachne\Gateway\Localhost;
 use Arachne\Identity\IdentityRotatorInterface;
 use GuzzleHttp\ClientInterface as GuzzleInterface;
@@ -116,7 +117,7 @@ class GuzzleClient extends GenericClient
                 ->send($request, $config);
         } catch (RequestException $exception) {
             if ($exception->hasResponse()) {
-                $this->getIdentityRotator()->evaluateResult($exception->getResponse());
+                $this->eventDispatcher->dispatch(ResponseReceived::name, new ResponseReceived($request, $exception->getResponse()));
             }
             throw new HttpRequestException('Failed to send HTTP Request', 0, $exception);
         }

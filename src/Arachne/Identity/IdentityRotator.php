@@ -45,6 +45,7 @@ abstract class IdentityRotator implements IdentityRotatorInterface
     }
 
     /**
+     * @param GatewayInterface $gateway
      * @param ResponseInterface $response
      * @return bool
      */
@@ -58,13 +59,17 @@ abstract class IdentityRotator implements IdentityRotatorInterface
     /**
      * @param ResponseInterface $response
      */
-    public function evaluateResult(ResponseInterface $response)
+    public function evaluateResult(?ResponseInterface $response)
     {
         $currentIdentity = $this->getCurrentIdentity();
         $gateway = $currentIdentity->getGateway();
         $gateway->requested(); // increase request count
-        if ($this->evaluate($gateway, $response)) {
-            $gateway->succeeded();
+        if ($response) {
+            if ($this->evaluate($gateway, $response)) {
+                $gateway->succeeded();
+            } else {
+                $gateway->failed();
+            }
         } else {
             $gateway->failed();
         }

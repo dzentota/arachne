@@ -2,6 +2,7 @@
 
 namespace Arachne;
 
+use Arachne\Exceptions\NoGatewaysLeftException;
 use Http\Message\RequestFactory;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -133,7 +134,12 @@ class Arachne
             $this->logger->critical('Got Exception during parsing the Response from ' . $resource->getUrl());
             $this->logger->critical('Exception message: ' . $exception->getMessage());
             $this->handleException($resource, $response, $exception);
-        } catch (\Exception $exception) {
+        } catch (NoGatewaysLeftException $exception) {
+            $this->handleException($resource, $response, $exception);
+            //if script is still running due to shutdownOnException === false
+            $this->shutdown();
+        }
+        catch (\Exception $exception) {
             $this->logger->critical('Got Exception during sending the Request ' . $resource->getUrl());
             $this->logger->critical('Exception message: ' . $exception->getMessage());
             $this->failedResources[] = $resource;

@@ -1,11 +1,16 @@
 <?php
 require 'vendor/autoload.php';
 
+use Arachne\Client\Events\ResponseReceived;
 use Arachne\Event\Event;
+use Arachne\Gateway\Gateway;
+use Arachne\Gateway\GatewayServer;
+use Arachne\Identity\Identity;
 use Psr\Http\Message\ResponseInterface;
 use Arachne\Crawler\DomCrawler;
 use Arachne\ResultSet;
 use Respect\Validation\Validator as v;
+use Arachne\Identity\IdentitiesCollection;
 
 $container = \Arachne\Service\Container::create();
 
@@ -15,6 +20,25 @@ $container = \Arachne\Service\Container::create(new \Arachne\Service\Proxy(
         protected function getDbName()
         {
             return 'kaina';
+        }
+
+        public function identities(): IdentitiesCollection
+        {
+            $gatewayServers = [
+//                GatewayServer::localhost(),
+//                GatewayServer::fromString('213.159.247.209:3128'),
+//                GatewayServer::fromString('177.180.153.65:55808'),
+                GatewayServer::fromString('188.6.162.140:54440'),
+            ];
+            $identities = [];
+            foreach ($gatewayServers as $i => $gatewayServer) {
+                $gateway = new Gateway($this->getContainer()->eventDispatcher(), $gatewayServer,
+                    $this->gatewayProfile());
+                $defaultUserAgent = \Campo\UserAgent::random();
+                $identity = new Identity($gateway, $defaultUserAgent);
+                $identities[] = $identity;
+            }
+            return new IdentitiesCollection(...$identities);
         }
     }
 ));
@@ -48,7 +72,7 @@ class Product extends \Arachne\Item
 }
 
 $container->get()->eventDispatcher()
-    ->addListener(\Arachne\Client\Events\ResponseReceived::name, function(Event $event) use ($container) {
+    ->addListener(ResponseReceived::name, function(Event $event) use ($container) {
         $container->get()->logger()->warning('SLEEPING...');
         sleep(1);
 
@@ -95,6 +119,6 @@ $container->get()
 //            print_r($item);
 //            die();
         },
-    ])
+    ], \Arachne\Mode::RESUME)
 //    ->dumpDocuments('product')
 ;

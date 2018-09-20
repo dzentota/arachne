@@ -25,9 +25,23 @@ $container = \Arachne\Service\Container::create(new \Arachne\Service\Proxy(
 
         public function identities(): IdentitiesCollection
         {
+//            // use curl to make the request
+//            $url = 'http://falcon.proxyrotator.com:51337/?apiKey=ZmNgTMuSW6edUFYKEGtJDAhQHfcojCPR';
+//            $ch = curl_init($url);
+//            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+//            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+//            $response = curl_exec($ch);
+//            curl_close($ch);
+//
+//// decode the json response
+//            $json = json_decode($response, true);
+//
+//// create $proxy to contain the ip:port ready to use
+//            $proxy = $json['proxy'];
             $gatewayServers = [
 //                GatewayServer::localhost(),
-                GatewayServer::fromString('89.163.212.9:45263'),
+//                GatewayServer::fromString($proxy),
+                GatewayServer::fromString('213.159.247.209:3128'),
 //                GatewayServer::fromString('https://95.181.0.66:3128'),
 //                GatewayServer::fromString('https://198.168.140.84:3128'),//will be skipped by GatewayProfile
             ];
@@ -51,7 +65,7 @@ $service = $container->get();
 
 for ($i = 0; $i < 5; $i++) {
     $request = $container->get()->requestFactory()
-        ->createRequest('GET', 'http://httpbin.org/ip');
+        ->createRequest('GET', 'https://httpbin.org/ip');
     try {
         echo $service->client()
             ->sendRequest($request)

@@ -225,13 +225,15 @@ class Arachne
      * @param array $config
      * @return $this
      */
-    public function scrape(array $config)
+    public function scrape(array $config, $mode = Mode::RESUME)
     {
+        $this->prepareEnv($mode);
         $this->prepareHandlers($config);
         if (!empty($config['url'])) {
             $resource = $this->createResource($config);
-            $this->processSingeItem($resource);
-            return $this;
+            $this->scheduler->schedule($resource, FrontierInterface::PRIORITY_HIGH);
+//            $this->processSingeItem($resource);
+//            return $this;
         }
         if (!empty($config['frontier'])) {
             if (!is_array($config['frontier']) && (!$config['frontier'] instanceof \Traversable)) {
@@ -251,16 +253,16 @@ class Arachne
                 }
                 $this->scheduler->schedule($resource, $priority);
             }
-            while ($item = $this->currentItem = $this->scheduler->nextItem()) {
-                if ($item instanceof Resource) {
-                    $this->processSingeItem($item);
-                }
-                if ($item instanceof BatchResource) {
-                    $this->processBatch($item);
-                }
-            }
-            $this->logger->debug('No more Items to process');
         }
+        while ($item = $this->currentItem = $this->scheduler->nextItem()) {
+            if ($item instanceof Resource) {
+                $this->processSingeItem($item);
+            }
+            if ($item instanceof BatchResource) {
+                $this->processBatch($item);
+            }
+        }
+        $this->logger->debug('No more Items to process');
         return $this;
     }
 
@@ -468,6 +470,21 @@ class Arachne
             $wp->run($resource);
         }
         $wp->waitForAllWorkers(); // wait for all workers
+    }
+
+    /**
+     * @param $mode
+     */
+    protected function prepareEnv($mode)
+    {
+        if ($mode === Mode::REFRESH) {
+            $this->scheduler->clear();
+        }
+        if ($mode === Mode::CLEAR) {
+            $this->scheduler->clear();
+            $this->docManager->getDocStorage()->clear();
+            $this->docManager->getBlobsStorage()->clear();
+        }
     }
 
 }

@@ -180,6 +180,7 @@ class GenericFactory extends Factory
             'connect_timeout' => 5,
             'timeout' => 5,
             'http_errors' => false,
+            'verify' => false,
             'allow_redirects' => [
                 'max' => 5,
                 'protocols' => ['http', 'https'],

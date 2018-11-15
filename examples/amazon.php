@@ -7,6 +7,8 @@ use Arachne\Event\Event;
 use Arachne\Gateway\Gateway;
 use Arachne\Gateway\GatewayServer;
 use Arachne\Identity\Identity;
+use Gaufrette\Adapter\Local;
+use Gaufrette\Filesystem;
 use Psr\Http\Message\ResponseInterface;
 use Arachne\Crawler\DomCrawler;
 use Arachne\ResultSet;
@@ -19,9 +21,15 @@ $container = \Arachne\Service\Container::create();
 $container = \Arachne\Service\Container::create(new \Arachne\Service\Proxy(
     new class extends \Arachne\Service\MongoFactory
     {
+        public function filesystem(): Filesystem
+        {
+            $filesystem = new Filesystem(new Local(sys_get_temp_dir() . '/amazon2'));
+            return $filesystem;
+        }
+
         protected function getDbName()
         {
-            return 'amazon';
+            return 'amazon2';
         }
 
         protected function createDelayHandler(LoggerInterface $logger)
@@ -42,12 +50,8 @@ $container = \Arachne\Service\Container::create(new \Arachne\Service\Proxy(
         public function identities(): IdentitiesCollection
         {
             $gatewayServers = [
-                GatewayServer::localhost(),
-//                GatewayServer::fromString('213.159.247.209:3128'),
-//                GatewayServer::fromString('177.180.153.65:55808'),
-//                GatewayServer::fromString('128.127.163.223:32231'),
-//                GatewayServer::fromString('173.249.36.171:3128'),
-//                GatewayServer::fromString('177.105.232.105:8080'),
+//                GatewayServer::localhost(),
+                GatewayServer::fromString('http://apricer:8HLF9bfkKH@realtime.oxylabs.io:60000'),
             ];
             $identities = [];
             foreach ($gatewayServers as $i => $gatewayServer) {
@@ -92,12 +96,12 @@ class Product extends \Arachne\Item
 //    }
 }
 
-$container->get()->eventDispatcher()
-    ->addListener(ResponseReceived::name, function(Event $event) use ($container) {
-        $container->get()->logger()->warning('SLEEPING...');
-        sleep(1);
-
-    });
+//$container->get()->eventDispatcher()
+//    ->addListener(ResponseReceived::name, function(Event $event) use ($container) {
+//        $container->get()->logger()->warning('SLEEPING...');
+//        sleep(1);
+//
+//    });
 
 $container->get()
     ->scraper()
@@ -118,8 +122,8 @@ $container->get()
             $crawler->filter('#atfResults .s-item-container')->each(function (DomCrawler $crawler) use ($resultSet){
                 $prime = $crawler->filter('.a-icon-prime')->attr('class');
 //                if (!empty($prime)) {
-                    $link = $crawler->filter('a.s-access-detail-page')->attr('href');
-                    $resultSet->addHighPriorityResource('item', $link);
+                $link = $crawler->filter('a.s-access-detail-page')->attr('href');
+                $resultSet->addHighPriorityResource('item', $link);
 //                }
             });
             $crawler->filter('.pagnLink a')->each(function (DomCrawler $crawler) use ($resultSet) {
@@ -137,7 +141,7 @@ $container->get()
             $data['price'] = trim($crawler->filter('#priceblock_ourprice')->text());
 
             $item = new Product($data);
-      //      $item->normalizeUrl();
+            //      $item->normalizeUrl();
             $resultSet->addItem($item);
 //            print_r($item);
 //            die();

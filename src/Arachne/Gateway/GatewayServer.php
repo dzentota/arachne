@@ -64,11 +64,13 @@ class GatewayServer implements GatewayServerInterface
     public static function fromString(string $proxy)
     {
         $data = parse_url($proxy);
-        $ip = $data['host']?? null;
+        $ip = $data['host']?? null;//@todo rename ip to host
         if (empty($ip)) {//e.g  $proxy = '127.0.0.1'
             $ip = $data['path']?? null;
         }
-        v::notEmpty()->ip()->assert($ip);
+        v::notEmpty()
+            //->ip()
+            ->assert($ip);
 
         $port = $data['port']?? 80;
         v::intVal()->assert($port);

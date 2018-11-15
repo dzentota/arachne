@@ -15,6 +15,8 @@ use Arachne\Identity\Identity;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 /**
+ * curl.cainfo="/path/to/downloaded/cacert.pem"
+ *
  * Class GuzzleClient
  * @package Arachne\Client
  *
@@ -56,7 +58,7 @@ class GuzzleClient extends GenericClient
      */
     public function getHttpClient()
     {
-        return $this->httpClient?? new \GuzzleHttp\Client(['cookies' => true, 'http_errors' => false]);
+        return $this->httpClient?? new \GuzzleHttp\Client(['cookies' => true, 'http_errors' => false, 'verify' => __DIR__ . '/cacert.pem']);
     }
 
     /**

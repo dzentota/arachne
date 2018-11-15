@@ -61,8 +61,7 @@ class Resource extends HttpResource implements \Serializable
      */
     public function getHash() : string
     {
-        $data = ['type'=> $this->type, 'meta'=>$this->meta, 'url'=>(string) $this->getHttpRequest()->getUri()];
-        return sha1(json_encode($data));
+        return sha1(json_encode($this->serialize()));
     }
 
     /**

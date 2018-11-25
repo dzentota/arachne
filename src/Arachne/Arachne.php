@@ -128,7 +128,6 @@ class Arachne
             $this->logger->error('Got Exception during sending the Request ' . $resource->getUrl());
             $this->logger->error('Exception message: ' . ($exception->getPrevious() ?
                     $exception->getPrevious()->getMessage() : $exception->getMessage()));
-            $this->failedResources[] = $resource;
             $this->handleHttpFail($resource, $response, $exception);
         } catch (ParsingResponseException $exception) {
             $this->logger->critical('Got Exception during parsing the Response from ' . $resource->getUrl());
@@ -392,6 +391,7 @@ class Arachne
                     $e->getMessage()));
             }
         }
+        $this->failedResources[] = $resource;
         $this->shutdownOnException && $this->shutdown();
     }
 

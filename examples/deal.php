@@ -21,7 +21,7 @@ $service = \Arachne\Service\Container::create(new \Arachne\Service\Proxy(
             return 'deal';
         }
 
-        protected function createHttpClient()
+        public function createHttpClient()
         {
             $logger = $this->getContainer()->logger();
             $stack = HandlerStack::create(new CurlHandler());

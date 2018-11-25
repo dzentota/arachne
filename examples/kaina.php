@@ -31,12 +31,12 @@ $container = \Arachne\Service\Container::create(new \Arachne\Service\Proxy(
         public function identities(): IdentitiesCollection
         {
             $gatewayServers = [
-                GatewayServer::localhost(),
+//                GatewayServer::localhost(),
 //                GatewayServer::fromString('213.159.247.209:3128'),
 //                GatewayServer::fromString('177.180.153.65:55808'),
 //                GatewayServer::fromString('128.127.163.223:32231'),
 //                GatewayServer::fromString('173.249.36.171:3128'),
-//                GatewayServer::fromString('177.105.232.105:8080'),
+                GatewayServer::fromString('177.105.232.105:8080'),
             ];
             $identities = [];
             foreach ($gatewayServers as $i => $gatewayServer) {

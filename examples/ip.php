@@ -41,9 +41,9 @@ $container = \Arachne\Service\Container::create(new \Arachne\Service\Proxy(
             $gatewayServers = [
 //                GatewayServer::localhost(),
 //                GatewayServer::fromString($proxy),
-                GatewayServer::fromString('213.159.247.209:3128'),
+//                GatewayServer::fromString('177.180.153.65:55808'),
 //                GatewayServer::fromString('https://95.181.0.66:3128'),
-//                GatewayServer::fromString('https://198.168.140.84:3128'),//will be skipped by GatewayProfile
+                GatewayServer::fromString('62.33.115.41:36322'),//will be skipped by GatewayProfile
             ];
             $identities = [];
             foreach ($gatewayServers as $i => $gatewayServer) {

@@ -27,7 +27,7 @@ abstract class IdentityRotator implements IdentityRotatorInterface
                 ResponseInterface $response
             ) {
                 if ($response->getStatusCode() !== 200) {
-                    if ($response->getStatusCode() === 429) {
+                    if ($response->getStatusCode() === 429 || strlen((string)$response->getBody() === 0)) {
                         $gateway->block();
                     }
                     return false;

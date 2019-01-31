@@ -42,11 +42,11 @@ abstract class GenericClient implements ClientInterface
             $this->eventDispatcher->dispatch(RequestPrepared::name, new RequestPrepared($request, $config));
             $response = $this->sendHTTPRequest($request, $config);
             $this->eventDispatcher->dispatch(ResponseReceived::name, new ResponseReceived($request, $response));
-            $this->identityRotator->evaluateResult($response);
         } catch (\Exception $exception) {
             $this->getIdentityRotator()->evaluateResult(null);
             throw new HttpRequestException('Failed to send HTTP Request', 0, $exception);
         }
+        $this->identityRotator->evaluateResult($response);
         return $response;
     }
 

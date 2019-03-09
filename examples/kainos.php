@@ -67,6 +67,9 @@ $container->get()
     ->scraper()
     ->scrape([
         'frontier' => [
+
+            ['url' => 'https://www.kainos.lt/prekes-vaikams-kudikiams?page=58', 'type' => 'category'],
+
             ['url' => 'https://www.kainos.lt/mobilieji-telefonai', 'type' => 'category'],
             ['url' => 'https://www.kainos.lt/smulki-buitine-technika', 'type' => 'category'],
             ['url' => 'https://www.kainos.lt/saldytuvai', 'type' => 'category'],
@@ -80,6 +83,21 @@ $container->get()
             ['url' => 'https://www.kainos.lt/orkaites', 'type' => 'category'],
             ['url' => 'https://www.kainos.lt/indaploves', 'type' => 'category'],
             ['url' => 'https://www.kainos.lt/dziovykles', 'type' => 'category'],
+
+            ['url' => 'https://www.kainos.lt/buitine-technika', 'type' => 'category'],
+            ['url' => 'https://www.kainos.lt/audio-video', 'type' => 'category'],
+            ['url' => 'https://www.kainos.lt/kompiuterine-technika', 'type' => 'category'],
+            ['url' => 'https://www.kainos.lt/foto-video-prekes', 'type' => 'category'],
+            ['url' => 'https://www.kainos.lt/foto-video-prekes', 'type' => 'category'],
+            ['url' => 'https://www.kainos.lt/sportas-laisvalaikis-turizmas', 'type' => 'category'],
+            ['url' => 'https://www.kainos.lt/prekes-vaikams-kudikiams', 'type' => 'category'],
+            ['url' => 'https://www.kainos.lt/prekes-vaikams-kudikiams', 'type' => 'category'],
+            ['url' => 'https://www.kainos.lt/namams-sodui', 'type' => 'category'],
+            ['url' => 'https://www.kainos.lt/grozis-sveikata-higiena', 'type' => 'category'],
+            ['url' => 'https://www.kainos.lt/knygos', 'type' => 'category'],
+            ['url' => 'https://www.kainos.lt/automobiliu-prekes', 'type' => 'category'],
+            ['url' => 'https://www.kainos.lt/apranga-avalyne-aksesuarai', 'type' => 'category'],
+            ['url' => 'https://www.kainos.lt/kvepalai-ir-kosmetika', 'type' => 'category'],
         ],
         'success:category' => function (ResponseInterface $response, ResultSet $resultSet) use ($container) {
             $crawler = new DomCrawler((string)$response->getBody());

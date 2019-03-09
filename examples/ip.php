@@ -39,18 +39,15 @@ $container = \Arachne\Service\Container::create(new \Arachne\Service\Proxy(
 //// create $proxy to contain the ip:port ready to use
 //            $proxy = $json['proxy'];
             $gatewayServers = [
-//                GatewayServer::localhost(),
-//                GatewayServer::fromString($proxy),
-                GatewayServer::fromString('213.159.247.209:3128'),
-//                GatewayServer::fromString('https://95.181.0.66:3128'),
-//                GatewayServer::fromString('https://198.168.140.84:3128'),//will be skipped by GatewayProfile
+               GatewayServer::fromString('https://202.178.123.124:30231'),
+                GatewayServer::fromString('https://182.253.123.9:3128'),
+//                GatewayServer::fromString('217.219.20.136:8080'),
+//                GatewayServer::fromString('178.128.115.98:8080'),
             ];
             $identities = [];
             foreach ($gatewayServers as $i => $gatewayServer) {
                 $gateway = new Gateway($this->getContainer()->eventDispatcher(), $gatewayServer,
-                    $i < 2? $this->gatewayProfile() : new GatewayProfile(null, [
-                        'httpbin\.org'
-                    ])
+                    $this->gatewayProfile()
                 );
                 $defaultUserAgent = \Campo\UserAgent::random();
                 $identity = new Identity($gateway, $defaultUserAgent);

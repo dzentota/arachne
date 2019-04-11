@@ -58,7 +58,11 @@ class GuzzleClient extends GenericClient
      */
     public function getHttpClient()
     {
-        return $this->httpClient?? new \GuzzleHttp\Client(['cookies' => true, 'http_errors' => false, 'verify' => __DIR__ . '/cacert.pem']);
+        return $this->httpClient?? new \GuzzleHttp\Client(
+            ['cookies' => true, 'http_errors' => false,
+//                'verify' => __DIR__ . '/cacert.pem'
+                'verify' => false,
+            ]);
     }
 
     /**

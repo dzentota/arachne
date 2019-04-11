@@ -3,7 +3,7 @@
 namespace Arachne\Tests;
 
 use Arachne\BatchResource;
-use Arachne\Resource;
+use Arachne\HttpResource;
 use Zend\Diactoros\Request;
 
 class BatchResourceTest extends \PHPUnit_Framework_TestCase
@@ -11,9 +11,9 @@ class BatchResourceTest extends \PHPUnit_Framework_TestCase
     public function testBatch()
     {
         $batch = new BatchResource();
-        $resource1 = new Resource(new Request('http://localhost/foo/bar', 'GET'), 'test1');
-        $resource2 = new Resource(new Request('http://localhost/xxx/zzz', 'GET'), 'test2');
-        $resource3 = new Resource(new Request('http://localhost/abc/zzz', 'GET'), 'test3');
+        $resource1 = new HttpResource(new Request('http://localhost/foo/bar', 'GET'), 'test1');
+        $resource2 = new HttpResource(new Request('http://localhost/xxx/zzz', 'GET'), 'test2');
+        $resource3 = new HttpResource(new Request('http://localhost/abc/zzz', 'GET'), 'test3');
 
         $batch->addResources($resource1, $resource2);
 

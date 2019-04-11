@@ -8,7 +8,7 @@ use Arachne\BlobsStorage\BlobsStorageInterface;
 use Arachne\Document\DocumentInterface;
 use Arachne\Document\Manager;
 use Arachne\Document\InMemory as InMemoryStorage;
-use Arachne\Resource;
+use Arachne\HttpResource;
 use Zend\Diactoros\Request;
 
 
@@ -43,7 +43,7 @@ class ManagerTest extends \PHPUnit_Framework_TestCase
             ->disableOriginalConstructor()
             ->setMethods(['getDocument'])
             ->getMock();
-        $resource = new Resource(new Request(), 'type');
+        $resource = new HttpResource(new Request(), 'type');
         $resource->setMeta([
             'item_type' => 'test_type',
             'item_id' => 'test-id'
@@ -68,7 +68,7 @@ class ManagerTest extends \PHPUnit_Framework_TestCase
             ->disableOriginalConstructor()
             ->setMethods(['updateDocument'])
             ->getMock();
-        $resource = new Resource(new Request(), 'type');
+        $resource = new HttpResource(new Request(), 'type');
         $resource->setMeta([
             'item_type' => 'test_type',
             'item_id' => 'test-id'
@@ -96,14 +96,14 @@ class ManagerTest extends \PHPUnit_Framework_TestCase
             ->setMethodsExcept(['bindResourceToDoc'])
             ->getMock();
         $meta = ['item_id' => 'test-id', 'item_type' => 'test_type'];
-        $resource = $this->getMockBuilder(Resource::class)->disableOriginalConstructor()->setMethods(['setMeta'])->getMock();
+        $resource = $this->getMockBuilder(HttpResource::class)->disableOriginalConstructor()->setMethods(['setMeta'])->getMock();
         $resource->expects($this->once())->method('setMeta')->with($meta);
         $manager->bindResourceToDoc($resource, 'test_type', 'test-id');
     }
 
     public function testIsBoundToDoc()
     {
-        $resource = new Resource(new Request(), 'type');
+        $resource = new HttpResource(new Request(), 'type');
         $manager = $this->getMockBuilder(Manager::class)
             ->disableOriginalConstructor()
             ->setMethodsExcept(['isBoundToDoc'])

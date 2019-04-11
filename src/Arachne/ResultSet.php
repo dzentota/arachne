@@ -12,7 +12,7 @@ use Arachne\Frontier\FrontierInterface;
 class ResultSet
 {
     /**
-     * @var \Arachne\Resource|Resource
+     * @var \Arachne\HttpResource|HttpResource
      */
     private $resource;
 
@@ -22,10 +22,10 @@ class ResultSet
     private $requestFactory;
 
     /**
-     * @param Resource $resource
+     * @param HttpResource $resource
      * @param RequestFactory $requestFactory
      */
-    public function __construct(Resource $resource, RequestFactory $requestFactory)
+    public function __construct(HttpResource $resource, RequestFactory $requestFactory)
     {
         $this->resource = $resource;
         $this->requestFactory = $requestFactory;
@@ -67,16 +67,6 @@ class ResultSet
         return $this;
     }
 
-    /**
-     * @param BatchResource $resource
-     * @param int $priority
-     * @return $this
-     */
-    public function addBatch(BatchResource $resource, $priority = FrontierInterface::PRIORITY_NORMAL)
-    {
-        $this->newResources[$priority][] = $resource;
-        return $this;
-    }
 
     /**
      * @param $type
@@ -113,7 +103,7 @@ class ResultSet
     ) {
         $httpRequest = $this->requestFactory->createRequest($method, $url, $headers, $body?? null)
             ->withHeader('Referer', $this->resource->getUrl());
-        $newResource = new Resource($httpRequest, $type);
+        $newResource = new HttpResource($httpRequest, $type);
         if (empty($item)) {
             $this->newResources[$priority][] = $newResource;
         } else {
@@ -129,11 +119,11 @@ class ResultSet
     }
 
     /**
-     * @param Resource $newResource
+     * @param HttpResource $newResource
      * @param Item|null $item
      * @param int $priority
      */
-    public function addNewResource(Resource $newResource, Item $item = null, $priority = FrontierInterface::PRIORITY_NORMAL)
+    public function addNewResource(HttpResource $newResource, Item $item = null, $priority = FrontierInterface::PRIORITY_NORMAL)
     {
         if (empty($item)) {
             $this->newResources[$priority][] = $newResource;
@@ -222,56 +212,11 @@ class ResultSet
     }
 
     /**
-     * @return \Arachne\Resource|Resource
+     * @return \Arachne\HttpResource|HttpResource
      */
     public function getResource()
     {
         return $this->resource;
     }
 
-    /**
-     * @param int $size
-     * @return $this
-     */
-    public function packInBatch($size = 5)
-    {
-        $newResources = $this->newResources[FrontierInterface::PRIORITY_NORMAL]?? [];
-        $this->newResources[FrontierInterface::PRIORITY_NORMAL] = [];
-
-        $newHighPriorityResources = $this->newResources[FrontierInterface::PRIORITY_HIGH]?? [];
-        $this->newResources[FrontierInterface::PRIORITY_HIGH] = [];
-
-
-        foreach (array_chunk($newResources, $size) as $chunk) {
-            $batch = new BatchResource();
-            $batch->addResources(...$chunk);
-            $this->newResources[FrontierInterface::PRIORITY_NORMAL][] = $batch;
-        }
-
-        foreach (array_chunk($newHighPriorityResources, $size) as $chunk) {
-            $batch = new BatchResource();
-            $batch->addResources(...$chunk);
-            $this->newResources[FrontierInterface::PRIORITY_HIGH][] = $batch;
-        }
-
-        $relatedResources = $this->relatedResources[FrontierInterface::PRIORITY_NORMAL]?? [];
-        $this->relatedResources[FrontierInterface::PRIORITY_NORMAL] = [];
-
-        $relatedHighPriorityResources = $this->relatedResources[FrontierInterface::PRIORITY_HIGH]?? [];
-        $this->relatedResources[FrontierInterface::PRIORITY_HIGH] = [];
-
-
-        foreach (array_chunk($relatedResources, $size) as $chunk) {
-            $batch = new BatchResource();
-            $batch->addResources(...$chunk);
-            $this->relatedResources[FrontierInterface::PRIORITY_NORMAL][] = $batch;
-        }
-
-        foreach (array_chunk($relatedHighPriorityResources, $size) as $chunk) {
-            $batch = new BatchResource();
-            $batch->addResources(...$chunk);
-            $this->relatedResources[FrontierInterface::PRIORITY_HIGH][] = $batch;
-        }
-        return $this;
-    }
 }

@@ -14,7 +14,7 @@ class InMemoryTest extends \PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        $resource = $this->getMockBuilder('\\Arachne\\Resource')->disableOriginalConstructor()->getMock();
+        $resource = $this->getMockBuilder('\\Arachne\\HttpResource')->disableOriginalConstructor()->getMock();
         $resource->expects($this->any())->method('getHash')->will($this->returnValue(sha1(123)));
         $this->resource = $resource;
         self::$storage = new InMemory();
@@ -29,7 +29,7 @@ class InMemoryTest extends \PHPUnit_Framework_TestCase
     public function testAddExists()
     {
         $this->assertTrue(self::$storage->exists('foo', $this->resource));
-        $resource = $this->getMockBuilder('\\Arachne\\Resource')->disableOriginalConstructor()->getMock();
+        $resource = $this->getMockBuilder('\\Arachne\\HttpResource')->disableOriginalConstructor()->getMock();
         $resource->expects($this->any())->method('getHash')->will($this->returnValue(sha1(555)));
         $this->assertFalse(self::$storage->exists('foo', $resource));
     }
@@ -37,7 +37,7 @@ class InMemoryTest extends \PHPUnit_Framework_TestCase
     public function testRemoveCountClear()
     {
         $this->assertEquals(1, self::$storage->count('foo'));
-        $resource = $this->getMockBuilder('\\Arachne\\Resource')->disableOriginalConstructor()->getMock();
+        $resource = $this->getMockBuilder('\\Arachne\\HttpResource')->disableOriginalConstructor()->getMock();
         $resource->expects($this->any())->method('getHash')->will($this->returnValue(sha1(555)));
         self::$storage->add('foo', $resource);
         $this->assertEquals(2, self::$storage->count('foo'));

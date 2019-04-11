@@ -4,7 +4,7 @@ namespace Arachne\Tests\Frontier;
 
 use Arachne\Frontier\FrontierInterface;
 use Arachne\Frontier\Mongo;
-use Arachne\Resource;
+use Arachne\HttpResource;
 use Zend\Diactoros\Request;
 
 class MongoTest extends \PHPUnit_Framework_TestCase
@@ -29,9 +29,9 @@ class MongoTest extends \PHPUnit_Framework_TestCase
 
     public function testQueue()
     {
-        $resource = new Resource(new Request('/', 'GET'), 'foo');
-        $resource2 = new Resource(new Request('/', 'GET'), 'bar');
-        $resource3 = new Resource(new Request('/', 'GET'), 'baz');
+        $resource = new HttpResource(new Request('/', 'GET'), 'foo');
+        $resource2 = new HttpResource(new Request('/', 'GET'), 'bar');
+        $resource3 = new HttpResource(new Request('/', 'GET'), 'baz');
         self::$mongo->populate($resource);
         self::$mongo->populate($resource2);
 

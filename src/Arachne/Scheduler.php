@@ -61,42 +61,15 @@ class Scheduler
                 FrontierInterface::PRIORITY_HIGH
             )
         );
-        switch (true) {
-            case $item instanceof \Arachne\Resource:
-                $this->populateSingleItem($item, $priority);
-                break;
-            case $item instanceof \Arachne\BatchResource:
-                foreach ($item->getResources() as $resource) {
-                    if (!$this->isNewResource($resource)) {
-                        $this->getLogger()->notice(
-                            sprintf("Resource [%s] %s is already scheduled/visited. Removed from batch",
-                                $resource->getType(),
-                                $resource->getUrl()
-                            )
-                        );
-                        $item->removeResource($resource);
-                    }
-                }
-                if ($item->count()) {
-                    $this->getFrontier()->populate($item, $priority);
-                    $this->logger->debug(sprintf('Scheduled batch of %d resources', $item->count()));
-                } else {
-                    $this->getLogger()->notice("Batch is empty. Skipped");
-                }
-                break;
-            default:
-                throw new \InvalidArgumentException(
-                    sprintf('Instance of Arachne\HttpResource expected. %s given', gettype($item)));
-                break;
-        }
+        $this->populateSingleItem($item, $priority);
     }
 
     /**
-     * @param \Arachne\Resource|Resource $resource
+     * @param \Arachne\HttpResource|HttpResource $resource
      * @param int $priority
      */
     private function populateSingleItem(
-        Resource $resource,
+        HttpResource $resource,
         int $priority
     ) {
         if ($this->isScheduled($resource)) {
@@ -123,35 +96,9 @@ class Scheduler
     }
 
     /**
-     * @param Resource $resource
-     * @return bool
+     * @param \Arachne\HttpResource|HttpResource $resource
      */
-    private function isNewResource(Resource $resource): bool
-    {
-        if ($this->isScheduled($resource)) {
-            return false;
-        }
-
-        if ($this->isVisited($resource) && !$this->canContainLinksToNewResources($resource)) {
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * @param Resource $resource
-     * @return bool
-     */
-    private function canContainLinksToNewResources(Resource $resource): bool
-    {
-        return (bool)preg_match('~!$~s', $resource->getType());
-    }
-
-    /**
-     * @param \Arachne\Resource|Resource $resource
-     */
-    public function markVisited(Resource $resource)
+    public function markVisited(HttpResource $resource)
     {
         $this->getFilter()->add('visited', $resource);
         $this->getFilter()->remove('scheduled', $resource);
@@ -164,18 +111,18 @@ class Scheduler
     }
 
     /**
-     * @param Resource $resource
+     * @param HttpResource $resource
      * @return bool
      */
-    public function isVisited(Resource $resource): bool
+    public function isVisited(HttpResource $resource): bool
     {
         return (bool)$this->getFilter()->exists('visited', $resource);
     }
 
     /**
-     * @param Resource $resource
+     * @param HttpResource $resource
      */
-    public function markScheduled(Resource $resource)
+    public function markScheduled(HttpResource $resource)
     {
         $this->getFilter()->add('scheduled', $resource);
         $this->getLogger()->debug(
@@ -187,10 +134,10 @@ class Scheduler
     }
 
     /**
-     * @param Resource $resource
+     * @param HttpResource $resource
      * @return bool
      */
-    public function isScheduled(Resource $resource): bool
+    public function isScheduled(HttpResource $resource): bool
     {
         return (bool)$this->getFilter()->exists('scheduled', $resource);
     }
@@ -206,4 +153,14 @@ class Scheduler
         $this->getFilter()->clear('scheduled');
         $this->getFilter()->clear('visited');//???
     }
+
+    /**
+     * @param HttpResource $resource
+     * @return bool
+     */
+    private function canContainLinksToNewResources(HttpResource $resource): bool
+    {
+        return (bool)preg_match('~!$~s', $resource->getType());
+    }
+
 }

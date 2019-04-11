@@ -115,9 +115,9 @@ class Arachne
     }
 
     /**
-     * @param \Arachne\Resource|Resource $resource
+     * @param \Arachne\HttpResource|HttpResource $resource
      */
-    public function processSingeItem(Resource $resource)
+    public function processSingeItem(HttpResource $resource)
     {
         $this->lastRequest = $request = $resource->getHttpRequest();
         $response = null;
@@ -165,7 +165,7 @@ class Arachne
     }
 
     protected function handleException(
-        Resource $resource,
+        HttpResource $resource,
         ResponseInterface $response = null,
         \Exception $exception = null
     ) {
@@ -267,7 +267,7 @@ class Arachne
             }
         }
         while ($item = $this->currentItem = $this->scheduler->nextItem()) {
-            if ($item instanceof Resource) {
+            if ($item instanceof HttpResource) {
                 $this->processSingeItem($item);
             }
             if ($item instanceof BatchResource) {
@@ -281,7 +281,7 @@ class Arachne
 
     /**
      * @param array $resourceConfig
-     * @return mixed|Resource
+     * @return mixed|HttpResource
      */
     protected function createResource(array $resourceConfig)
     {
@@ -291,7 +291,7 @@ class Arachne
         $headers = $resourceConfig['headers']?? [];
         $type = $resourceConfig['type']?? 'default';
         $resource = $resourceConfig['resource']??
-            new Resource($this->requestFactory->createRequest($method, $url, $headers, $body), $type);
+            new HttpResource($this->requestFactory->createRequest($method, $url, $headers, $body), $type);
         return $resource;
     }
 
@@ -355,11 +355,11 @@ class Arachne
     }
 
     /**
-     * @param Resource $resource
+     * @param HttpResource $resource
      * @param $resultSet
      * @param $response
      */
-    protected function saveBlobs(Resource $resource, ResultSet $resultSet, ResponseInterface $response)
+    protected function saveBlobs(HttpResource $resource, ResultSet $resultSet, ResponseInterface $response)
     {
         if ($resultSet->isBlob() || ($resource->getType() === 'blob')) {
             $blobsStorage = $this->docManager->getBlobsStorage();
@@ -384,7 +384,7 @@ class Arachne
     }
 
     protected function handleHttpFail(
-        Resource $resource,
+        HttpResource $resource,
         ResponseInterface $response = null,
         \Exception $exception = null
     ) {
@@ -401,7 +401,7 @@ class Arachne
         $this->shutdownOnException && $this->shutdown();
     }
 
-    protected function handleHttpSuccess(Resource $resource, ResponseInterface $response = null)
+    protected function handleHttpSuccess(HttpResource $resource, ResponseInterface $response = null)
     {
         $resultSet = new ResultSet($resource, $this->requestFactory);
         if ($handler = $this->getSuccessHandler($resource->getType())) {
@@ -422,11 +422,11 @@ class Arachne
     }
 
     /**
-     * @param Resource $resource
+     * @param HttpResource $resource
      * @param $response
      * @param $logger
      */
-    protected function handleResponse(Resource $resource, ResponseInterface $response = null)
+    protected function handleResponse(HttpResource $resource, ResponseInterface $response = null)
     {
         if ((!empty($response)) && $response->getStatusCode() === 200) {
             $this->handleHttpSuccess($resource, $response);

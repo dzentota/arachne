@@ -24,7 +24,7 @@ class MongoTest extends \PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        $resource = $this->getMockBuilder('\\Arachne\\Resource')->disableOriginalConstructor()->getMock();
+        $resource = $this->getMockBuilder('\\Arachne\\HttpResource')->disableOriginalConstructor()->getMock();
         $resource->expects($this->any())->method('getHash')->will($this->returnValue(sha1(123)));
         $this->resource = $resource;
         self::$mongo->add('foo', $resource);
@@ -38,7 +38,7 @@ class MongoTest extends \PHPUnit_Framework_TestCase
     public function testAddExists()
     {
         $this->assertTrue(self::$mongo->exists('foo', $this->resource));
-        $resource = $this->getMockBuilder('\\Arachne\\Resource')->disableOriginalConstructor()->getMock();
+        $resource = $this->getMockBuilder('\\Arachne\\HttpResource')->disableOriginalConstructor()->getMock();
         $resource->expects($this->any())->method('getHash')->will($this->returnValue(sha1(555)));
         $this->assertFalse(self::$mongo->exists('foo', $resource));
     }
@@ -46,7 +46,7 @@ class MongoTest extends \PHPUnit_Framework_TestCase
     public function testRemoveCountClear()
     {
         $this->assertEquals(1, self::$mongo->count('foo'));
-        $resource = $this->getMockBuilder('\\Arachne\\Resource')->disableOriginalConstructor()->getMock();
+        $resource = $this->getMockBuilder('\\Arachne\\HttpResource')->disableOriginalConstructor()->getMock();
         $resource->expects($this->any())->method('getHash')->will($this->returnValue(sha1(555)));
         self::$mongo->add('foo', $resource);
         $this->assertEquals(2, self::$mongo->count('foo'));

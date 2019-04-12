@@ -94,7 +94,7 @@ class HttpResource implements \Serializable
     /**
      * @param null $var
      * @param null $default
-     * @return array|null
+     * @return mixed
      */
     public function getMeta($var = null, $default = null)
     {

@@ -144,7 +144,7 @@ class GenericFactory extends Factory
 
     public function filesystem(): Filesystem
     {
-        $filesystem = new Filesystem(new Local(sys_get_temp_dir()));
+        $filesystem = new Filesystem(new Local(sys_get_temp_dir() . DIRECTORY_SEPARATOR  . 'arachne', true));
         return $filesystem;
     }
 

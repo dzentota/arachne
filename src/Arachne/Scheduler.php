@@ -50,10 +50,10 @@ class Scheduler
     }
 
     /**
-     * @param HttpResource $item
+     * @param HttpResource $resource
      * @param int $priority
      */
-    public function schedule(HttpResource $item, $priority = FrontierInterface::PRIORITY_NORMAL)
+    public function scheduleNewResources(HttpResource $resource, $priority = FrontierInterface::PRIORITY_NORMAL)
     {
         assert(in_array($priority, [FrontierInterface::PRIORITY_NORMAL, FrontierInterface::PRIORITY_HIGH]),
             sprintf('$priority can be only %s or %s',
@@ -61,17 +61,6 @@ class Scheduler
                 FrontierInterface::PRIORITY_HIGH
             )
         );
-        $this->populateSingleItem($item, $priority);
-    }
-
-    /**
-     * @param \Arachne\HttpResource|HttpResource $resource
-     * @param int $priority
-     */
-    private function populateSingleItem(
-        HttpResource $resource,
-        int $priority
-    ) {
         if ($this->isScheduled($resource)) {
             $this->getLogger()->notice(
                 sprintf("Resource [%s] %s is already scheduled",
@@ -91,6 +80,18 @@ class Scheduler
             );
             return;
         }
+        $this->getFrontier()->populate($resource, $priority);
+        $this->markScheduled($resource);
+    }
+
+    public function schedule(HttpResource $resource, $priority = FrontierInterface::PRIORITY_NORMAL)
+    {
+        assert(in_array($priority, [FrontierInterface::PRIORITY_NORMAL, FrontierInterface::PRIORITY_HIGH]),
+            sprintf('$priority can be only %s or %s',
+                FrontierInterface::PRIORITY_NORMAL,
+                FrontierInterface::PRIORITY_HIGH
+            )
+        );
         $this->getFrontier()->populate($resource, $priority);
         $this->markScheduled($resource);
     }

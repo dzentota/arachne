@@ -4,6 +4,7 @@ namespace Arachne;
 
 use Arachne\Exceptions\GatewayException;
 use Arachne\Exceptions\NoGatewaysLeftException;
+use function GuzzleHttp\Psr7\str;
 use Http\Message\RequestFactory;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -118,7 +119,7 @@ class Arachne
     /**
      * @param \Arachne\HttpResource|HttpResource $resource
      */
-    public function processSingeItem(HttpResource $resource)
+    public function processSingleItem(HttpResource $resource)
     {
         $this->lastRequest = $request = $resource->getHttpRequest();
         $response = null;
@@ -275,7 +276,7 @@ class Arachne
                 $batch[] = $resource;
                 $checkIfFrontierEmpty = true;
             }
-            $this->processBatch(...$batch);
+            $batch && $this->processBatch(...$batch);
         } while ($checkIfFrontierEmpty);
         $this->logger->debug('No more Items to process');
     }
@@ -438,6 +439,7 @@ class Arachne
         //
         $wp = new \QXS\WorkerPool\WorkerPool();
         $batchSize = $this->getConcurrency() ?: count($resources);
+        $batchSize = $batchSize > count($resources)? count($resources) :  $batchSize;
         $wp->setWorkerPoolSize($batchSize)
             ->create(new \QXS\WorkerPool\ClosureWorker(
                 /**
@@ -445,22 +447,31 @@ class Arachne
                  * @param \QXS\WorkerPool\Semaphore $semaphore the semaphore to synchronize calls accross all workers
                  * @param \ArrayObject $storage a persistent storage for the current child process
                  */
-                    function ($item, $semaphore, $storage) {
+                    function ($resource, $semaphore, $storage) {
                         //https://jira.mongodb.org/browse/PHPC-625
                         //When using pcntl_fork() with the new MongoDB\Driver it is impossible to create a new
                         // MongoDB manager in the child process if one has been opened in the parent process.
                         //the newly created on in the child process seem to share a socket to MongoDB and throw
                         // errors based on receiving each others responses.
-//                                $filter = $this->getFilter();
-//                                $frontier = $this->getFrontier();
-//                                $resultsStorage = $this->getResultsStorage();
+//                                $filter = $this->scheduler->getFilter();
+//                                $frontier = $this->scheduler->getFrontier();
+//                                $resultsStorage = $this->docManager->getResultsStorage();
 //                                foreach ([$filter, $frontier, $resultsStorage] as $_) {
 //                                    if (is_callable([$_, 'setManager'])) {
 //                                        $_->setManager(new \MongoDB\Driver\Manager("mongodb://localhost:27017/?x=" . posix_getpid()));
 //                                    }
 //                                }
-                        $this->processSingeItem($item);
-                        return $item;
+                        $response = null;
+                        $request = $resource->getHttpRequest();
+                        try {
+                            $response = $this->client->sendRequest($request);
+                            return ['resource' => $resource, 'response' => $response, 'content' => $response->getBody()->getContents()];
+                        } catch (HttpRequestException $exception) {
+                            $this->logger->error('Got Exception during sending the Request ' . $resource->getUrl());
+                            $this->logger->error('Exception message: ' . ($exception->getPrevious() ?
+                                    $exception->getPrevious()->getMessage() : $exception->getMessage()));
+                            return ['resource' => $resource, 'response' => $response, 'exception' => $exception];
+                        }
                     }
                 )
             );
@@ -468,9 +479,57 @@ class Arachne
             $wp->run($resource);
         }
         $wp->waitForAllWorkers(); // wait for all workers
-//        foreach ($wp as $result) {
-//            yield $result;
-//        }
+        foreach ($wp as $result) {
+
+            try {
+                extract($result['data']);
+                if (empty($exception)) {
+                    $response = $response->withBody( \GuzzleHttp\Psr7\stream_for($content));
+                    $this->scheduler->markVisited($resource);
+                    $this->handleResponse($resource, $response);
+                } else {
+                    $this->failedResources[] = $resource;
+                    /**
+                     * @var $exception \Exception
+                     */
+                    switch (get_class($exception)) {
+                        case HttpRequestException::class:
+                            $this->handleHttpFail($resource, $response, $exception);
+                            break;
+                        case NoGatewaysLeftException::class:
+                            $this->handleException($resource, $response, $exception);
+                            //if script is still running due to shutdownOnException === false
+                            $this->shutdown();
+                            break;
+                        case GatewayException::class:
+                            $this->handleException($resource, $response, $exception);
+                            break;
+                    }
+
+                }
+
+            } catch (ParsingResponseException $exception) {
+                $this->logger->critical('Got Exception during parsing the Response from ' . $resource->getUrl());
+                $this->logger->critical('Exception message: ' . $exception->getMessage());
+                $this->handleException($resource, $response, $exception);
+            } catch (\Exception $exception) {
+                $this->logger->critical('Got Exception during sending the Request ' . $resource->getUrl());
+                $this->logger->critical('Exception message: ' . $exception->getMessage());
+                $this->failedResources[] = $resource;
+                $this->handleException($resource, $response, $exception);
+            } finally {
+                if ($handler = $this->getAlwaysHandler($resource->getType())) {
+                    try {
+                        $handler($response, $resource);
+                        $this->logger->debug(sprintf('Handler of the resource %s has been called', $resource->getUrl()));
+                    } catch (\Exception $exception) {
+                        $this->logger->critical(sprintf('Failed to handle resource %s. Reason: %s', $resource->getUrl(),
+                            $exception->getMessage()));
+                        $this->handleException($resource, $response, $exception);
+                    }
+                }
+            }
+        }
     }
 
     /**

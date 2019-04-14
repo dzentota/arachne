@@ -8,7 +8,8 @@ use Arachne\Crawler\DomCrawler;
 use Arachne\ResultSet;
 use Respect\Validation\Validator as v;
 
-$container = \Arachne\Service\Container::create(new Proxy(new \Arachne\Service\MongoFactory()));
+//$container = \Arachne\Service\Container::create(new Proxy(new \Arachne\Service\MongoFactory()));
+$container = \Arachne\Service\Container::create();
 
 class NewsIntro extends \Arachne\Item
 {
@@ -45,9 +46,9 @@ $container->get()
                 $content = (string)$response->getBody();
                 $crawler = new DomCrawler($content);
                 $crawler->filter('item')
-//                ->reduce(function (DomCrawler $node, $i) {
-//                    return $i < 3;
-//                })
+                ->reduce(function (DomCrawler $node, $i) {
+                    return $i < 3;
+                })
                     ->each(function (DomCrawler $node) use (&$data) {
                         $data[] = [
                             'link' => $node->filter('link')->text(),

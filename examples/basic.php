@@ -41,9 +41,8 @@ $container->get()
     ->prepareEnv(\Arachne\Mode::CLEAR)
     ->addHandlers(
         [
-            'success:rss' => function (ResponseInterface $response, ResultSet $resultSet) use ($container) {
+            'success:rss' => function (string $content, ResultSet $resultSet) use ($container) {
                 $data = [];
-                $content = (string)$response->getBody();
                 $crawler = new DomCrawler($content);
                 $crawler->filter('item')
                 ->reduce(function (DomCrawler $node, $i) {
@@ -67,14 +66,14 @@ $container->get()
                     $resultSet->addResource('image', $image, $item);
                 }
             },
-            'success:page' => function (ResponseInterface $response, ResultSet $resultSet) {
-                $content = (new DomCrawler((string)$response->getBody()))->filter('.news-text')->html();
+            'success:page' => function (string $content, ResultSet $resultSet) {
+                $content = (new DomCrawler($content))->filter('.news-text')->html();
                 $data = ['content' => $content];
                 $item = new NewsContent($data);
                 $resultSet->addItem($item);
             },
             //the same as build in 'blobs' handler
-            'success:image' => function (ResponseInterface $response, ResultSet $resultSet) {
+            'success:image' => function (string $response, ResultSet $resultSet) {
                 $resultSet->markAsBlob();
             }
         ]

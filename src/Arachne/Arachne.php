@@ -4,7 +4,6 @@ namespace Arachne;
 
 use Arachne\Exceptions\GatewayException;
 use Arachne\Exceptions\NoGatewaysLeftException;
-use function GuzzleHttp\Psr7\str;
 use Http\Message\RequestFactory;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -70,6 +69,8 @@ class Arachne
      */
     private $handlers = [];
 
+    private $parentPid = 0;
+
 
     /**
      * Arachne constructor.
@@ -86,18 +87,26 @@ class Arachne
         Document\Manager $docManager,
         RequestFactory $requestFactory
     ) {
+        $this->parentPid = getmypid();
         $this->logger = $logger;
         $this->client = $client;
         $this->scheduler = $scheduler;
         $this->docManager = $docManager;
         $this->requestFactory = $requestFactory;
+        $this->logger->debug('Started process with PID: ' . $this->parentPid);
         register_shutdown_function(function () use ($scheduler) {
-            $this->logger->debug('Shutting down');
-            if ($this->reschedulePreviouslyFailedResources && count($this->failedResources)) {
-                $this->logger->debug('Rescheduling failed resources for the next run');
-                foreach ($this->failedResources as $failedResource) {
-                    $this->scheduler->schedule($failedResource);
+            if ($this->parentPid === getmypid()) {
+                $this->logger->debug('Shutting down parent process');
+                if ($this->reschedulePreviouslyFailedResources && count($this->failedResources)) {
+                    $this->logger->debug('Rescheduling failed resources for the next run');
+                    $failedResources[] = $this->failedResources;
+                    $this->failedResources = [];
+                    foreach ($failedResources as $failedResource) {
+                        $this->scheduler->schedule($failedResource);
+                    }
                 }
+            } else {
+                $this->logger->debug('Shutting down worker process');
             }
         });
     }
@@ -166,7 +175,7 @@ class Arachne
 
     protected function handleException(
         HttpResource $resource,
-        ResponseInterface $response = null,
+        string $response = null,
         \Exception $exception = null
     ) {
         if ($handler = $this->getExceptionHandler($resource->getType())) {
@@ -347,11 +356,11 @@ class Arachne
      * @param $resultSet
      * @param $response
      */
-    protected function saveBlobs(HttpResource $resource, ResultSet $resultSet, ResponseInterface $response)
+    protected function saveBlobs(HttpResource $resource, ResultSet $resultSet, string $content)
     {
         if ($resultSet->isBlob() || ($resource->getType() === 'blob')) {
             $blobsStorage = $this->docManager->getBlobsStorage();
-            $path = $blobsStorage->write($resource, (string)$response->getBody());
+            $path = $blobsStorage->write($resource, $content);
             $this->logger->debug(sprintf('Saving blob resource [%s] to [%s]', $resource->getUrl(), $path));
             if ($itemId = $resource->getMeta('related_id', null)) {
                 $itemType = $resource->getMeta('related_type');
@@ -373,7 +382,7 @@ class Arachne
 
     protected function handleHttpFail(
         HttpResource $resource,
-        ResponseInterface $response = null,
+        string $response = null,
         \Exception $exception = null
     ) {
         if ($handler = $this->getFailHandler($resource->getType())) {
@@ -389,7 +398,7 @@ class Arachne
         $this->shutdownOnException && $this->shutdown();
     }
 
-    protected function handleHttpSuccess(HttpResource $resource, ResponseInterface $response = null)
+    protected function handleHttpSuccess(HttpResource $resource, string $response = null)
     {
         $resultSet = new ResultSet($resource, $this->requestFactory);
         if ($handler = $this->getSuccessHandler($resource->getType())) {
@@ -414,7 +423,7 @@ class Arachne
      * @param $response
      * @param $logger
      */
-    protected function handleResponse(HttpResource $resource, ResponseInterface $response = null)
+    protected function handleResponse(HttpResource $resource, string $response = null)
     {
         if ((!empty($response)) && $response->getStatusCode() === 200) {
             $this->handleHttpSuccess($resource, $response);
@@ -434,9 +443,6 @@ class Arachne
      */
     protected function processBatch(HttpResource ... $resources)
     {
-        // @attention !!! You can not bind one Resource to another by passing thrid parameter to
-        // $resultSet->addResource(...) if you use InMemory adapter
-        //
         $wp = new \QXS\WorkerPool\WorkerPool();
         $batchSize = $this->getConcurrency() ?: count($resources);
         $batchSize = $batchSize > count($resources)? count($resources) :  $batchSize;
@@ -448,19 +454,6 @@ class Arachne
                  * @param \ArrayObject $storage a persistent storage for the current child process
                  */
                     function ($resource, $semaphore, $storage) {
-                        //https://jira.mongodb.org/browse/PHPC-625
-                        //When using pcntl_fork() with the new MongoDB\Driver it is impossible to create a new
-                        // MongoDB manager in the child process if one has been opened in the parent process.
-                        //the newly created on in the child process seem to share a socket to MongoDB and throw
-                        // errors based on receiving each others responses.
-//                                $filter = $this->scheduler->getFilter();
-//                                $frontier = $this->scheduler->getFrontier();
-//                                $resultsStorage = $this->docManager->getResultsStorage();
-//                                foreach ([$filter, $frontier, $resultsStorage] as $_) {
-//                                    if (is_callable([$_, 'setManager'])) {
-//                                        $_->setManager(new \MongoDB\Driver\Manager("mongodb://localhost:27017/?x=" . posix_getpid()));
-//                                    }
-//                                }
                         $response = null;
                         $request = $resource->getHttpRequest();
                         try {
@@ -483,10 +476,19 @@ class Arachne
 
             try {
                 extract($result['data']);
+                /**
+                 * @var string $content
+                 * @var HttpResource $resource
+                 * @var ResponseInterface $response
+                 * @var \Exception $exception
+                 */
                 if (empty($exception)) {
-                    $response = $response->withBody( \GuzzleHttp\Psr7\stream_for($content));
                     $this->scheduler->markVisited($resource);
-                    $this->handleResponse($resource, $response);
+                    if ((!empty($response)) && $response->getStatusCode() === 200) {
+                        $this->handleHttpSuccess($resource, $content);
+                    } else {
+                        $this->handleHttpFail($resource, $content);
+                    }
                 } else {
                     $this->failedResources[] = $resource;
                     /**
@@ -494,15 +496,15 @@ class Arachne
                      */
                     switch (get_class($exception)) {
                         case HttpRequestException::class:
-                            $this->handleHttpFail($resource, $response, $exception);
+                            $this->handleHttpFail($resource, $content, $exception);
                             break;
                         case NoGatewaysLeftException::class:
-                            $this->handleException($resource, $response, $exception);
+                            $this->handleException($resource, $content, $exception);
                             //if script is still running due to shutdownOnException === false
                             $this->shutdown();
                             break;
                         case GatewayException::class:
-                            $this->handleException($resource, $response, $exception);
+                            $this->handleException($resource, $content, $exception);
                             break;
                     }
 
@@ -511,21 +513,21 @@ class Arachne
             } catch (ParsingResponseException $exception) {
                 $this->logger->critical('Got Exception during parsing the Response from ' . $resource->getUrl());
                 $this->logger->critical('Exception message: ' . $exception->getMessage());
-                $this->handleException($resource, $response, $exception);
+                $this->handleException($resource, $content, $exception);
             } catch (\Exception $exception) {
                 $this->logger->critical('Got Exception during sending the Request ' . $resource->getUrl());
                 $this->logger->critical('Exception message: ' . $exception->getMessage());
                 $this->failedResources[] = $resource;
-                $this->handleException($resource, $response, $exception);
+                $this->handleException($resource, $content, $exception);
             } finally {
                 if ($handler = $this->getAlwaysHandler($resource->getType())) {
                     try {
-                        $handler($response, $resource);
+                        $handler($content, $resource);
                         $this->logger->debug(sprintf('Handler of the resource %s has been called', $resource->getUrl()));
                     } catch (\Exception $exception) {
                         $this->logger->critical(sprintf('Failed to handle resource %s. Reason: %s', $resource->getUrl(),
                             $exception->getMessage()));
-                        $this->handleException($resource, $response, $exception);
+                        $this->handleException($resource, $content, $exception);
                     }
                 }
             }
@@ -536,7 +538,7 @@ class Arachne
      * @param $mode
      * @return Arachne
      */
-    public function prepareEnv($mode)
+    public function prepareEnv($mode = Mode::RESUME)
     {
         if ($mode === Mode::REFRESH) {
             $this->scheduler->clear();

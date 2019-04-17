@@ -1,15 +1,11 @@
 <?php
 require 'vendor/autoload.php';
 
-use Arachne\Service\GenericFactory;
-use Arachne\Service\Proxy;
-use Psr\Http\Message\ResponseInterface;
 use Arachne\Crawler\DomCrawler;
 use Arachne\ResultSet;
 use Respect\Validation\Validator as v;
 
-//$container = \Arachne\Service\Container::create(new Proxy(new \Arachne\Service\MongoFactory()));
-$container = \Arachne\Service\Container::create();
+require 'src/services.php';
 
 class NewsIntro extends \Arachne\Item
 {
@@ -36,8 +32,7 @@ class NewsContent extends \Arachne\Item
     }
 }
 
-$container->get()
-    ->scraper()
+$container['scraper']
     ->prepareEnv(\Arachne\Mode::CLEAR)
     ->addHandlers(
         [

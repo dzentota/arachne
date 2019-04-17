@@ -1,12 +1,11 @@
 <?php
 
 require 'vendor/autoload.php';
+require 'src/services.php';
 
-$service = \Arachne\Service\Container::create()->get();
-
-$request = $service->requestFactory()
+$request = $container['requestFactory']
     ->createRequest('GET', 'http://httpbin.org/get');
 
-echo $service->client()
+echo $container['client']
     ->sendRequest($request)
     ->getBody();

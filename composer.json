@@ -28,7 +28,8 @@
         "symfony/event-dispatcher": "~2.8",
         "jmikola/wildcard-event-dispatcher": "~1.0",
         "dzentota/chrome-dev-tools": "dev-master",
-        "jwage/purl": "^1.0@dev"
+        "jwage/purl": "^1.0@dev",
+        "pimple/pimple": "~3.0"
     },
     "require-dev": {
         "phpunit/phpunit": "5.7.*"

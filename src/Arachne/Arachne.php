@@ -327,7 +327,7 @@ class Arachne
     {
         foreach ($resultSet->getParsedResources() as $priority => $resData) {
             foreach ($resData as $newResource) {
-                $this->scheduler->scheduleNewResources($newResource, $priority);
+                $this->scheduler->scheduleNewResource($newResource, $priority);
             }
         }
     }

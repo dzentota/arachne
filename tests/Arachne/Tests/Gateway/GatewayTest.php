@@ -158,8 +158,11 @@ class GatewayTest extends \PHPUnit_Framework_TestCase
             ->with(GatewayBlocked::name, new GatewayBlocked($gatewayServer));
 
         $gateway = new Gateway($eventDispatcher, $gatewayServer);
-        $gateway->block();
-        $this->assertTrue($gateway->isBlocked());
+        try {
+            $gateway->block();
+        } catch (\Arachne\Exceptions\GatewayException $exception) {
+            $this->assertTrue($gateway->isBlocked());
+        }
     }
 
     public function testUnblock()

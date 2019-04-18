@@ -22,7 +22,7 @@ class ManagerTest extends \PHPUnit_Framework_TestCase
     public static function setUpBeforeClass()
     {
         $logger = new NullLogger();
-        $documentStorage = new InMemoryStorage($logger);
+        $documentStorage = new InMemoryStorage();
         $blobsStorage = new Gaufrette($logger, new Filesystem(new \Gaufrette\Adapter\InMemory()));
         self::$manager = new Manager($documentStorage, $blobsStorage);
     }

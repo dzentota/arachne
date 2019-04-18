@@ -11,14 +11,14 @@ class MongoTest extends \PHPUnit_Framework_TestCase
 
     public static function setUpBeforeClass()
     {
-        $client = new \MongoDB\Client();
+        $client = new \MongoDB\Client('mongodb://mongo', ['username' => 'root', 'password' => 'root']);
         $client->scraper_test->drop();
         self::$mongo = new Mongo($client, 'scraper_test');
     }
 
     public static function tearDownAfterClass()
     {
-        $client = new \MongoDB\Client();
+        $client = new \MongoDB\Client('mongodb://mongo', ['username' => 'root', 'password' => 'root']);
         $client->scraper_test->drop();
     }
 

@@ -16,7 +16,7 @@ services:
       ME_CONFIG_MONGODB_ADMINUSERNAME: root
       ME_CONFIG_MONGODB_ADMINPASSWORD: root
   web:
-    image: thecodingmachine/php:7.1-v1-apache-node8
+    image: thecodingmachine/php:7.2-v1-apache-node8
     hostname: 'sugarcrm'
     environment:
       PHP_INI_ERROR_REPORTING: E_ERROR
@@ -26,9 +26,8 @@ services:
       APACHE_EXTENSION_HEADERS: 1
       APACHE_EXTENSION_EXPIRES: 1
       APACHE_LOG_DIR: '/var/log/apache2'
-      #      PHP_EXTENSION_XDEBUG: 1
-      PHP_EXTENSIONS: bcmath blackfire calendar dba exif gd gettext gmp imap intl ldap mcrypt memcached mongodb sockets sysvmsg sysvsem sysvshm pcntl tidy xdebug xmlrpc xsl
-#      PHP_EXTENSIONS: bcmath blackfire calendar dba exif gd gettext gmp imap intl ldap mcrypt memcached mongodb sockets sysvmsg sysvsem sysvshm pcntl tidy xmlrpc xsl
+      PHP_EXTENSIONS:  bcmath exif gd intl mcrypt memcached mongodb sockets sysvmsg sysvsem sysvshm pcntl xmlrpc xsl
+      PHP_EXTENSION_XDEBUG: 1
       PHP_INI_XDEBUG__REMOTE_AUTOSTART: 1
       #serverName=SomeName, where SomeName is the name of the server configured in Settings / Preferences | Languages & Frameworks | PHP | Servers
       PHP_IDE_CONFIG: "serverName=Docker"

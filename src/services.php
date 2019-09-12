@@ -3,7 +3,6 @@
 use Arachne\Gateway\Gateway;
 use Arachne\Gateway\GatewayProfile;
 use Arachne\Gateway\GatewayServer;
-use Arachne\Identity\IdentityRotatorInterface;
 use Arachne\Identity\RoundRobinIdentityRotator;
 use Gaufrette\Adapter\Local;
 use Gaufrette\Filesystem;
@@ -15,27 +14,21 @@ use GuzzleHttp\Handler\CurlHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Middleware;
 use Http\Message\MessageFactory\DiactorosMessageFactory;
-use Http\Message\RequestFactory;
-use Http\Message\ResponseFactory;
 use Jmikola\WildcardEventDispatcher\WildcardEventDispatcher;
 use Monolog\Handler\StreamHandler;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerInterface;
 use Arachne\BlobsStorage\Gaufrette;
-use Arachne\Client\ClientInterface;
 use Arachne\Client\ClientLogger;
 use Arachne\Client\GuzzleClient;
-use Arachne\Document\DocumentInterface;
 use Arachne\Document\DocumentLogger;
 use Arachne\Document\InMemory as InMemoryStorage;
 use Arachne\Document\Manager;
 use Arachne\Event\Event;
 use Arachne\Event\EventSummaryInterface;
-use Arachne\Filter\FilterInterface;
 use Arachne\Filter\FilterLogger;
 use Arachne\Filter\InMemory as InMemoryFilter;
-use Arachne\Frontier\FrontierInterface;
 use Arachne\Frontier\FrontierLogger;
 use Arachne\Frontier\InMemory as InMemoryFrontier;
 use Arachne\Identity\IdentitiesCollection;
@@ -43,9 +36,8 @@ use Arachne\Identity\Identity;
 use Arachne\Scheduler;
 use Arachne\Arachne;
 use Symfony\Component\EventDispatcher\EventDispatcher;
-use Symfony\Component\EventDispatcher\EventDispatcherInterface;
-use Zoya\Monolog\Formatter\ColoredConsoleFormatter;
 use Pimple\Container;
+use \Bramus\Monolog\Formatter\ColoredLineFormatter;
 
 $container = new Container();
 
@@ -53,7 +45,7 @@ $container['HTTP_MAX_RETRIES'] = 2;
 
 $container['logger'] = function ($c) {
     $stream = new StreamHandler('php://stderr', \Monolog\Logger::DEBUG);
-    $formatter = new ColoredConsoleFormatter(null, null, null, true);
+    $formatter = new ColoredLineFormatter();
     $stream->setFormatter($formatter);
     $logger = new \Monolog\Logger('Arachne');
     $logger->pushHandler($stream);

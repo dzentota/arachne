@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "1b4dceb600156aebf12891635bf0258c",
+    "content-hash": "788948445de31a4d0f6493801fd47e86",
     "packages": [
         {
             "name": "bramus/ansi-php",
@@ -2816,12 +2816,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/phpstan/phpstan.git",
-                "reference": "aab825ad9d015a79b829b4ea416319c645cafa44"
+                "reference": "6b3fbd5e409e4d09910e7cc92f699e6579d89756"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/aab825ad9d015a79b829b4ea416319c645cafa44",
-                "reference": "aab825ad9d015a79b829b4ea416319c645cafa44",
+                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/6b3fbd5e409e4d09910e7cc92f699e6579d89756",
+                "reference": "6b3fbd5e409e4d09910e7cc92f699e6579d89756",
                 "shasum": ""
             },
             "require": {
@@ -2829,6 +2829,7 @@
                 "jean85/pretty-package-versions": "^1.0.3",
                 "nette/bootstrap": "^3.0",
                 "nette/di": "^3.0",
+                "nette/neon": "^3.0",
                 "nette/robot-loader": "^3.0.1",
                 "nette/schema": "^1.0",
                 "nette/utils": "^3.0",
@@ -2879,7 +2880,7 @@
                 "MIT"
             ],
             "description": "PHPStan - PHP Static Analysis Tool",
-            "time": "2019-09-10T19:06:08+00:00"
+            "time": "2019-10-07T10:05:26+00:00"
         },
         {
             "name": "phpunit/php-code-coverage",
@@ -4148,7 +4149,9 @@
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {
-        "php": ">=7.0.0"
+        "php": ">=7.1.0",
+        "ext-json": "*",
+        "ext-mongodb": "*"
     },
     "platform-dev": []
 }

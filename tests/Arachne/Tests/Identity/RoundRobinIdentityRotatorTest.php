@@ -35,9 +35,9 @@ class RoundRobinIdentityRotatorTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @expectedException \Arachne\Exceptions\NoGatewaysLeftException
+     * @expectedException \Arachne\Exceptions\GatewayException
      */
-    public function testExceptionWhenNoIdentitiesLeft()
+    public function testGatewayException()
     {
         $identity = new Identity(new Gateway(new EventDispatcher(), GatewayServer::localhost()), 'Arachne');
         $identity2 = new Identity(new Gateway(new EventDispatcher(), GatewayServer::localhost(),
@@ -46,6 +46,20 @@ class RoundRobinIdentityRotatorTest extends \PHPUnit_Framework_TestCase
         $rotator = new RoundRobinIdentityRotator($collection);
         $request = $this->createMock(Request::class);
         $identity->getGateway()->block();
+        $rotator->switchIdentityFor($request);
+    }
+
+    /**
+     * @expectedException \Arachne\Exceptions\NoGatewaysLeftException
+     */
+    public function testExceptionWhenNoIdentitiesLeft()
+    {
+        $identity = new Identity(new Gateway(new EventDispatcher(), GatewayServer::localhost()), 'Arachne');
+        $identity->getGateway()->setMaxTotalFails(1);
+        $collection = new IdentitiesCollection($identity);
+        $rotator = new RoundRobinIdentityRotator($collection);
+        $request = $this->createMock(Request::class);
+        $identity->getGateway()->failed();
         $rotator->switchIdentityFor($request);
     }
 }

@@ -38,7 +38,7 @@ abstract class GenericCollection implements \IteratorAggregate, \Countable
      * The return value is cast to an integer.
      * @since 5.1.0
      */
-    public function count()
+    public function count(): int
     {
         return count($this->values);
     }

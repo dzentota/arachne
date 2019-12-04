@@ -1,15 +1,12 @@
 <?php
 require 'vendor/autoload.php';
 
-use Arachne\Service\GenericFactory;
-use Arachne\Service\Proxy;
-use Psr\Http\Message\ResponseInterface;
 use Arachne\Crawler\DomCrawler;
 use Arachne\ResultSet;
+use Psr\Http\Message\ResponseInterface;
 use Respect\Validation\Validator as v;
 
-//$container = \Arachne\Service\Container::create(new Proxy(new \Arachne\Service\MongoFactory()));
-$container = \Arachne\Service\Container::create();
+require 'src/services.php';
 
 class NewsIntro extends \Arachne\Item
 {
@@ -36,12 +33,12 @@ class NewsContent extends \Arachne\Item
     }
 }
 
-$container->get()
-    ->scraper()
+$container['scraper']
     ->prepareEnv(\Arachne\Mode::CLEAR)
     ->addHandlers(
         [
-            'success:rss' => function (string $content, ResultSet $resultSet) use ($container) {
+            'success:rss' => function (ResponseInterface $response, ResultSet $resultSet) use ($container) {
+                $content = $response->getBody()->getContents();
                 $data = [];
                 $crawler = new DomCrawler($content);
                 $crawler->filter('item')
@@ -66,14 +63,15 @@ $container->get()
                     $resultSet->addResource('image', $image, $item);
                 }
             },
-            'success:page' => function (string $content, ResultSet $resultSet) {
+            'success:page' => function (ResponseInterface $response, ResultSet $resultSet) {
+                $content = $response->getBody()->getContents();
                 $content = (new DomCrawler($content))->filter('.news-text')->html();
                 $data = ['content' => $content];
                 $item = new NewsContent($data);
                 $resultSet->addItem($item);
             },
             //the same as build in 'blobs' handler
-            'success:image' => function (string $response, ResultSet $resultSet) {
+            'success:image' => function (ResponseInterface $response, ResultSet $resultSet) {
                 $resultSet->markAsBlob();
             }
         ]

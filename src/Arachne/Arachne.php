@@ -174,7 +174,7 @@ class Arachne
 
     protected function handleException(
         HttpResource $resource,
-        string $response = null,
+        ResponseInterface $response = null,
         \Exception $exception = null
     ) {
         if ($handler = $this->getExceptionHandler($resource->getType())) {
@@ -278,7 +278,7 @@ class Arachne
             $batch = [];
             for ($i = 0; $i < $this->concurrency; $i++) {
                 $resource = $this->scheduler->nextItem();
-                if (empty($resource)) {
+                if ($resource === null) {
                     break;
                 }
                 $batch[] = $resource;
@@ -326,7 +326,7 @@ class Arachne
     {
         foreach ($resultSet->getParsedResources() as $priority => $resData) {
             foreach ($resData as $newResource) {
-                $this->scheduler->scheduleNewResources($newResource, $priority);
+                $this->scheduler->scheduleNewResource($newResource, $priority);
             }
         }
     }
@@ -381,7 +381,7 @@ class Arachne
 
     protected function handleHttpFail(
         HttpResource $resource,
-        string $response = null,
+        ResponseInterface $response = null,
         \Exception $exception = null
     ) {
         if ($handler = $this->getFailHandler($resource->getType())) {
@@ -398,7 +398,7 @@ class Arachne
         $this->shutdownOnException && $this->shutdown();
     }
 
-    protected function handleHttpSuccess(HttpResource $resource, string $response = null)
+    protected function handleHttpSuccess(HttpResource $resource, ResponseInterface $response)
     {
         $resultSet = new ResultSet($resource, $this->requestFactory);
         if ($handler = $this->getSuccessHandler($resource->getType())) {
@@ -408,7 +408,7 @@ class Arachne
                     $resource->getUrl()));
                 $this->scheduleNewResources($resultSet);
                 $this->saveParsedItems($resultSet);
-                $this->saveBlobs($resource, $resultSet, $response);
+                $this->saveBlobs($resource, $resultSet, (string)$response->getBody());
 
             } catch (NestedValidationException $exception) {
                 throw new ParsingResponseException($exception->getFullMessage(), 0, $exception);
@@ -420,12 +420,12 @@ class Arachne
 
     /**
      * @param HttpResource $resource
-     * @param $response
-     * @param $logger
+     * @param ResponseInterface $response
+     * @throws ParsingResponseException
      */
-    protected function handleResponse(HttpResource $resource, string $response = null)
+    protected function handleResponse(HttpResource $resource, ResponseInterface $response = null)
     {
-        if ((!empty($response)) && $response->getStatusCode() === 200) {
+        if (!empty($response) && $response->getStatusCode() === 200) {
             $this->handleHttpSuccess($resource, $response);
         } else {
             $this->handleHttpFail($resource, $response);
@@ -439,7 +439,8 @@ class Arachne
     }
 
     /**
-     * @param $batch
+     * @param HttpResource[] $resources
+     * @throws \QXS\WorkerPool\WorkerPoolException
      */
     protected function processBatch(HttpResource ... $resources)
     {
@@ -458,12 +459,15 @@ class Arachne
                         $request = $resource->getHttpRequest();
                         try {
                             $response = $this->client->sendRequest($request);
-                            return ['resource' => $resource, 'response' => $response, 'content' => $response->getBody()->getContents()];
+                            /**
+                             * Serialize Response object to forward stream contents to parent process
+                             */
+                            return ['resource' => $resource, 'serializedResponse' => \Zend\Diactoros\Response\Serializer::toString($response)];
                         } catch (HttpRequestException $exception) {
                             $this->logger->error('Got Exception during sending the Request ' . $resource->getUrl());
                             $this->logger->error('Exception message: ' . ($exception->getPrevious() ?
                                     $exception->getPrevious()->getMessage() : $exception->getMessage()));
-                            return ['resource' => $resource, 'response' => $response, 'exception' => $exception];
+                            return ['resource' => $resource, 'serializedResponse' => \Zend\Diactoros\Response\Serializer::toString($response), 'exception' => $exception];
                         }
                     }
                 )
@@ -475,19 +479,20 @@ class Arachne
         foreach ($wp as $result) {
 
             try {
-                extract($result['data']);
                 /**
-                 * @var string $content
                  * @var HttpResource $resource
-                 * @var ResponseInterface $response
+                 * @var string $serializedResponse
                  * @var \Exception $exception
                  */
-                if (empty($exception)) {
+                extract($result['data'], EXTR_OVERWRITE);
+                $response = \Zend\Diactoros\Response\Serializer::fromString($serializedResponse);
+
+                if (!isset($exception)) {
                     $this->scheduler->markVisited($resource);
-                    if ((!empty($response)) && $response->getStatusCode() === 200) {
-                        $this->handleHttpSuccess($resource, $content);
+                    if (isset($response) && $response->getStatusCode() === 200) {
+                        $this->handleHttpSuccess($resource, $response);
                     } else {
-                        $this->handleHttpFail($resource, $content);
+                        $this->handleHttpFail($resource, $response);
                     }
                 } else {
                     $this->failedResources[] = $resource;
@@ -496,15 +501,15 @@ class Arachne
                      */
                     switch (get_class($exception)) {
                         case HttpRequestException::class:
-                            $this->handleHttpFail($resource, $content, $exception);
+                            $this->handleHttpFail($resource, $response, $exception);
                             break;
                         case NoGatewaysLeftException::class:
-                            $this->handleException($resource, $content, $exception);
+                            $this->handleException($resource, $response, $exception);
                             //if script is still running due to shutdownOnException === false
                             $this->shutdown();
                             break;
                         case GatewayException::class:
-                            $this->handleException($resource, $content, $exception);
+                            $this->handleException($resource, $response, $exception);
                             break;
                     }
 
@@ -513,21 +518,21 @@ class Arachne
             } catch (ParsingResponseException $exception) {
                 $this->logger->critical('Got Exception during parsing the Response from ' . $resource->getUrl());
                 $this->logger->critical('Exception message: ' . $exception->getMessage());
-                $this->handleException($resource, $content, $exception);
+                $this->handleException($resource, $response, $exception);
             } catch (\Exception $exception) {
                 $this->logger->critical('Got Exception during sending the Request ' . $resource->getUrl());
                 $this->logger->critical('Exception message: ' . $exception->getMessage());
                 $this->failedResources[] = $resource;
-                $this->handleException($resource, $content, $exception);
+                $this->handleException($resource, $response, $exception);
             } finally {
                 if ($handler = $this->getAlwaysHandler($resource->getType())) {
                     try {
-                        $handler($content, $resource);
+                        $handler($response, $resource);
                         $this->logger->debug(sprintf('Handler of the resource %s has been called', $resource->getUrl()));
                     } catch (\Exception $exception) {
                         $this->logger->critical(sprintf('Failed to handle resource %s. Reason: %s', $resource->getUrl(),
                             $exception->getMessage()));
-                        $this->handleException($resource, $content, $exception);
+                        $this->handleException($resource, $response, $exception);
                     }
                 }
             }

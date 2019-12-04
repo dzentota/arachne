@@ -2,7 +2,6 @@
 
 namespace Arachne\Gateway;
 use Arachne\Exceptions\GatewayException;
-use Arachne\Exceptions\NoGatewaysLeftException;
 use Arachne\Gateway\Events\GatewayBlocked;
 use Arachne\Gateway\Events\GatewayFailed;
 use Arachne\Gateway\Events\GatewayRequested;

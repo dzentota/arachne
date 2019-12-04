@@ -80,7 +80,7 @@ class Gaufrette implements BlobsStorageInterface
      * @param HttpResource $resource
      * @return string
      */
-    protected function getPath(HttpResource $resource)
+    protected function getPath(HttpResource $resource): string
     {
         $url = $resource->getHttpRequest()->getUri();
         $url = preg_replace('/^[a-z0-9]+:\/\//', '', $url);
@@ -110,7 +110,7 @@ class Gaufrette implements BlobsStorageInterface
      * @param \Arachne\HttpResource|HttpResource $resource
      * @return string
      */
-    protected function truncate(string $fileName, HttpResource $resource)
+    protected function truncate(string $fileName, HttpResource $resource): string
     {
         if ($this->strlen($fileName) > self::MAX_NAME) {
             $extension = pathinfo($fileName, PATHINFO_EXTENSION);
@@ -211,7 +211,9 @@ class Gaufrette implements BlobsStorageInterface
         $keys = $this->keys();
         foreach($keys as $key) {
             try {
-                @$this->getFilesystem()->delete($key);
+                if (!$this->getFilesystem()->getAdapter()->isDirectory($key)) {
+                    $this->getFilesystem()->delete($key);
+                }
             } catch (\Exception $exception) {
                 $this->logger->critical($exception->getMessage());
             }

@@ -36,9 +36,9 @@ class HttpResource implements \Serializable
     }
 
 
-    public function __sleep()
+    public function __sleep(): array
     {
-
+        return [];
     }
 
     public function getUrl() : string
@@ -147,7 +147,7 @@ class HttpResource implements \Serializable
      */
     public function unserialize($serialized)
     {
-        $data = unserialize($serialized);
+        $data = unserialize($serialized, ['allowed_classes' => false]);
         $this->meta = $data['meta'];
         $this->type = $data['type'];
         //@todo make it more flexible

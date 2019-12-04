@@ -45,7 +45,7 @@ class SchedulerTest extends \PHPUnit_Framework_TestCase
         $frontier->expects($this->never())->method('populate');
 
         $priority = FrontierInterface::PRIORITY_NORMAL;
-        $scheduler->schedule($item, $priority);
+        $scheduler->scheduleNewResource($item, $priority);
 
     }
 
@@ -71,7 +71,7 @@ class SchedulerTest extends \PHPUnit_Framework_TestCase
         $frontier->expects($this->never())->method('populate');
 
         $priority = FrontierInterface::PRIORITY_NORMAL;
-        $scheduler->schedule($item, $priority);
+        $scheduler->scheduleNewResource($item, $priority);
     }
 
     public function testPopulateSingleMarkScheduled()
@@ -96,7 +96,7 @@ class SchedulerTest extends \PHPUnit_Framework_TestCase
         $frontier->expects($this->once())->method('populate');
 
         $priority = FrontierInterface::PRIORITY_NORMAL;
-        $scheduler->schedule($item, $priority);
+        $scheduler->scheduleNewResource($item, $priority);
     }
 
 

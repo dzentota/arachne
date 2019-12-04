@@ -2,7 +2,6 @@
 
 namespace Arachne\Document;
 use Psr\Log\LoggerInterface;
-use Arachne\Document\DocumentInterface;
 
 /**
  * Class DocumentLogger

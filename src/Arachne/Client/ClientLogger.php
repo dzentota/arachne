@@ -31,7 +31,7 @@ class ClientLogger implements ClientInterface
     public function sendRequest(RequestInterface $request, array $config = []): ResponseInterface
     {
         $this->logger->info('Loading resource from URL ' . $request->getUri());
-        $this->logger->debug('Request config: ' . empty($config)? '<EMPTY>' : implode('; ', $config));
+        $this->logger->debug('Request config: ' . (empty($config) ? '<EMPTY>' : implode('; ', $config)));
         $response = $this->client->sendRequest($request, $config);
         $this->logger->debug(sprintf('Got response. Status code: %s, Content-Length: %s',
             $response->getStatusCode(), $response->getHeaderLine('Content-Length')));

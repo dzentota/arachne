@@ -53,7 +53,7 @@ class Scheduler
      * @param HttpResource $resource
      * @param int $priority
      */
-    public function scheduleNewResources(HttpResource $resource, $priority = FrontierInterface::PRIORITY_NORMAL)
+    public function scheduleNewResource(HttpResource $resource, $priority = FrontierInterface::PRIORITY_NORMAL)
     {
         assert(in_array($priority, [FrontierInterface::PRIORITY_NORMAL, FrontierInterface::PRIORITY_HIGH]),
             sprintf('$priority can be only %s or %s',

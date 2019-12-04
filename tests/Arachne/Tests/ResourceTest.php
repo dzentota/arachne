@@ -19,8 +19,12 @@ class ResourceTest extends \PHPUnit_Framework_TestCase
 
     public function testHash()
     {
-        $data = ['type'=> 'foo', 'meta'=> [], 'url'=> 'https://example.com/foo/bar?a=b#hash'];
-        $hash = sha1(json_encode($data));
+        $data = [
+            'meta' => [],
+            'type' => 'foo',
+            'httpRequest' => "GET https://example.com/foo/bar?a=b#hash HTTP/1.1\r\nHost: example.com"
+        ];
+        $hash = sha1(serialize($data));
         $this->assertEquals($hash, $this->resource->getHash());
     }
 

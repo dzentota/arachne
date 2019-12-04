@@ -2,6 +2,7 @@
 
 namespace Arachne;
 
+use Arachne\Exceptions\GatewayException;
 use Arachne\Exceptions\NoGatewaysLeftException;
 use Http\Message\RequestFactory;
 use Psr\Http\Message\RequestInterface;
@@ -135,9 +136,14 @@ class Arachne
             $this->handleException($resource, $response, $exception);
         } catch (NoGatewaysLeftException $exception) {
             $this->handleException($resource, $response, $exception);
+            $this->failedResources[] = $resource;
             //if script is still running due to shutdownOnException === false
             $this->shutdown();
+        } catch (GatewayException $exception) {
+            $this->handleException($resource, $response, $exception);
+            $this->failedResources[] = $resource;
         }
+
         catch (\Exception $exception) {
             $this->logger->critical('Got Exception during sending the Request ' . $resource->getUrl());
             $this->logger->critical('Exception message: ' . $exception->getMessage());
@@ -429,7 +435,7 @@ class Arachne
         }
     }
 
-    protected function shutdown()
+    public function shutdown()
     {
         $this->logger->debug('Shutting down');
         die();

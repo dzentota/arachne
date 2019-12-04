@@ -1,6 +1,8 @@
 <?php
 
 namespace Arachne\Gateway;
+use Arachne\Exceptions\GatewayException;
+use Arachne\Exceptions\NoGatewaysLeftException;
 use Arachne\Gateway\Events\GatewayBlocked;
 use Arachne\Gateway\Events\GatewayFailed;
 use Arachne\Gateway\Events\GatewayRequested;
@@ -144,6 +146,7 @@ class Gateway implements GatewayInterface
     {
         $this->blocked = true;
         $this->eventDispatcher->dispatch(GatewayBlocked::name, new GatewayBlocked($this->gatewayServer));
+        throw new GatewayException(sprintf('Gateway %s blocked', $this->gatewayServer));
     }
 
     /**

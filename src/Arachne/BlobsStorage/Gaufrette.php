@@ -210,7 +210,11 @@ class Gaufrette implements BlobsStorageInterface
         $this->logger->debug('Clearing Blobs Storage');
         $keys = $this->keys();
         foreach($keys as $key) {
-            $this->getFilesystem()->delete($key);
+            try {
+                $this->getFilesystem()->delete($key);
+            } catch (\Exception $exception) {
+                $this->logger->critical($exception->getMessage());
+            }
         }
     }
 }

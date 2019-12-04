@@ -2,7 +2,7 @@
 
 namespace Arachne\BlobsStorage;
 
-use Arachne\Resource;
+use Arachne\HttpResource;
 
 /**
  * Interface AdapterInterface
@@ -19,29 +19,29 @@ interface BlobsStorageInterface
     public function keys();
 
     /**
-     * @param \Arachne\Resource $resource
+     * @param \Arachne\HttpResource $resource
      * @param string|string $contents
      * @param bool $overwrite
      * @return mixed
      */
-    public function write(Resource $resource, string $contents = '', bool $overwrite = true);
+    public function write(HttpResource $resource, string $contents = '', bool $overwrite = true);
     /**
-     * @param \Arachne\Resource|Resource $resource
+     * @param \Arachne\HttpResource|HttpResource $resource
      * @return mixed
      */
-    public function read(Resource $resource);
+    public function read(HttpResource $resource);
 
     /**
-     * @param \Arachne\Resource|Resource $resource
+     * @param \Arachne\HttpResource|HttpResource $resource
      * @return mixed
      */
-    public function exists(Resource $resource);
+    public function exists(HttpResource $resource);
 
     /**
-     * @param \Arachne\Resource|Resource $resource
+     * @param \Arachne\HttpResource|HttpResource $resource
      * @return mixed
      */
-    public function delete(Resource $resource);
+    public function delete(HttpResource $resource);
 
     public function clear();
 

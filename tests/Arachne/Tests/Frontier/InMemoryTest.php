@@ -4,7 +4,7 @@ namespace Arachne\Tests\Frontier;
 
 use Arachne\Frontier\FrontierInterface;
 use Arachne\Frontier\InMemory;
-use Arachne\Resource;
+use Arachne\HttpResource;
 use Arachne\Frontier\InMemory\OrderedPriorityQueue;
 use Zend\Diactoros\Request;
 
@@ -23,9 +23,9 @@ class InMemoryTest extends \PHPUnit_Framework_TestCase
     public function testQueue()
     {
         $this->assertEquals(0, self::$storage->count());
-        $resource = new Resource(new Request('/', 'GET'), 'foo');
-        $resource2 = new Resource(new Request('/', 'GET'), 'bar');
-        $resource3 = new Resource(new Request('/', 'GET'), 'baz');
+        $resource = new HttpResource(new Request('/', 'GET'), 'foo');
+        $resource2 = new HttpResource(new Request('/', 'GET'), 'bar');
+        $resource3 = new HttpResource(new Request('/', 'GET'), 'baz');
         self::$storage->populate($resource);
         self::$storage->populate($resource2);
 

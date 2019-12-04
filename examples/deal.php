@@ -73,7 +73,7 @@ $service->scraper()
             $data = [$origUrl, $title, $effectiveUrl];
             fputcsv($h, $data);
         },
-        'fail:page' => function (ResponseInterface $response = null, \Arachne\Resource $resource = null, \Exception $exception = null) use($h, $service){
+        'fail:page' => function (ResponseInterface $response = null, \Arachne\HttpResource $resource = null, \Exception $exception = null) use($h, $service){
             $status = 'Error ';
             if ($response) {
                 if (429 === $response->getStatusCode()) {

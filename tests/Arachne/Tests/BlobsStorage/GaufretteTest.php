@@ -4,7 +4,7 @@ namespace Arachne\Tests\BlobsStorage;
 
 use Arachne\BlobsStorage\Gaufrette;
 use Gaufrette\Filesystem;
-use Arachne\Resource;
+use Arachne\HttpResource;
 use Psr\Log\NullLogger;
 use Zend\Diactoros\Request;
 
@@ -26,8 +26,8 @@ class GaufretteTest extends \PHPUnit_Framework_TestCase
     public function interfaceDataProvider()
     {
         return [
-            [new Resource(new Request('http://localhost/foo/bar'), 'test'), 'test contents', false, 'localhost/foo/bar'],
-            [new Resource(new Request('http://sub.domain.ltd/foo/bar/'), 'test'), 'sample test contents', true, 'sub.domain.ltd/foo/bar/index.dat'],
+            [new HttpResource(new Request('http://localhost/foo/bar'), 'test'), 'test contents', false, 'localhost/foo/bar'],
+            [new HttpResource(new Request('http://sub.domain.ltd/foo/bar/'), 'test'), 'sample test contents', true, 'sub.domain.ltd/foo/bar/index.dat'],
         ];
     }
 

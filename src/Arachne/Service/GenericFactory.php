@@ -12,6 +12,7 @@ use Gaufrette\Filesystem;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Handler\CurlFactory;
 use GuzzleHttp\Handler\CurlHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Middleware;
@@ -143,7 +144,7 @@ class GenericFactory extends Factory
 
     public function filesystem(): Filesystem
     {
-        $filesystem = new Filesystem(new Local(sys_get_temp_dir()));
+        $filesystem = new Filesystem(new Local(sys_get_temp_dir() . DIRECTORY_SEPARATOR  . 'arachne', true));
         return $filesystem;
     }
 
@@ -172,7 +173,7 @@ class GenericFactory extends Factory
     public function createHttpClient()
     {
         $logger = $this->getContainer()->logger();
-        $stack = HandlerStack::create(new CurlHandler());
+        $stack = HandlerStack::create(new CurlHandler(['handle_factory' => new CurlFactory(0)]));
         $stack->push(Middleware::retry($this->createRetryHandler($logger), $this->createDelayHandler($logger)));
 
         $client = new Client([

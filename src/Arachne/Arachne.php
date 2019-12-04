@@ -62,12 +62,14 @@ class Arachne
     /**
      * @var int
      */
-    private $workerPoolSize = 0;
+    private $concurrency = 10;
 
     /**
      * @var array
      */
     private $handlers = [];
+
+    private $parentPid = 0;
 
 
     /**
@@ -85,17 +87,26 @@ class Arachne
         Document\Manager $docManager,
         RequestFactory $requestFactory
     ) {
+        $this->parentPid = getmypid();
         $this->logger = $logger;
         $this->client = $client;
         $this->scheduler = $scheduler;
         $this->docManager = $docManager;
         $this->requestFactory = $requestFactory;
+        $this->logger->debug('Started process with PID: ' . $this->parentPid);
         register_shutdown_function(function () use ($scheduler) {
-            if ($this->reschedulePreviouslyFailedResources && count($this->failedResources)) {
-                $this->logger->debug('Rescheduling failed resources for the next run');
-                foreach ($this->failedResources as $failedResource) {
-                    $this->scheduler->getFrontier()->populate($failedResource);
+            if ($this->parentPid === getmypid()) {
+                $this->logger->debug('Shutting down parent process');
+                if ($this->reschedulePreviouslyFailedResources && count($this->failedResources)) {
+                    $this->logger->debug('Rescheduling failed resources for the next run');
+                    $failedResources[] = $this->failedResources;
+                    $this->failedResources = [];
+                    foreach ($failedResources as $failedResource) {
+                        $this->scheduler->schedule($failedResource);
+                    }
                 }
+            } else {
+                $this->logger->debug('Shutting down worker process');
             }
         });
     }
@@ -103,9 +114,9 @@ class Arachne
     /**
      * @return int
      */
-    public function getWorkerPoolSize(): int
+    public function getConcurrency(): int
     {
-        return $this->workerPoolSize;
+        return $this->concurrency;
     }
 
 
@@ -115,9 +126,9 @@ class Arachne
     }
 
     /**
-     * @param \Arachne\Resource|Resource $resource
+     * @param \Arachne\HttpResource|HttpResource $resource
      */
-    public function processSingeItem(Resource $resource)
+    public function processSingleItem(HttpResource $resource)
     {
         $this->lastRequest = $request = $resource->getHttpRequest();
         $response = null;
@@ -142,9 +153,7 @@ class Arachne
         } catch (GatewayException $exception) {
             $this->handleException($resource, $response, $exception);
             $this->failedResources[] = $resource;
-        }
-
-        catch (\Exception $exception) {
+        } catch (\Exception $exception) {
             $this->logger->critical('Got Exception during sending the Request ' . $resource->getUrl());
             $this->logger->critical('Exception message: ' . $exception->getMessage());
             $this->failedResources[] = $resource;
@@ -164,8 +173,8 @@ class Arachne
     }
 
     protected function handleException(
-        Resource $resource,
-        ResponseInterface $response = null,
+        HttpResource $resource,
+        string $response = null,
         \Exception $exception = null
     ) {
         if ($handler = $this->getExceptionHandler($resource->getType())) {
@@ -187,7 +196,7 @@ class Arachne
      */
     protected function getExceptionHandler(string $type)
     {
-        return $this->handlers[$type]['exception']?? null;
+        return $this->handlers[$type]['exception'] ?? null;
     }
 
     /**
@@ -196,7 +205,7 @@ class Arachne
      */
     protected function getSuccessHandler(string $type)
     {
-        return $this->handlers[$type]['success']?? null;
+        return $this->handlers[$type]['success'] ?? null;
     }
 
     /**
@@ -205,7 +214,7 @@ class Arachne
      */
     protected function getAlwaysHandler(string $type)
     {
-        return $this->handlers[$type]['always']?? null;
+        return $this->handlers[$type]['always'] ?? null;
     }
 
     /**
@@ -214,7 +223,7 @@ class Arachne
      */
     protected function getFailHandler(string $type)
     {
-        return $this->handlers[$type]['fail']?? null;
+        return $this->handlers[$type]['fail'] ?? null;
     }
 
 
@@ -233,71 +242,58 @@ class Arachne
 
 
     /**
-     * @param array $config
-     * @return $this
+     * @param HttpResource[] $resources
+     * @return Arachne
      */
-    public function scrape(array $config, $mode = Mode::RESUME)
+    public function scrape(HttpResource ...$resources)
     {
-        $this->prepareEnv($mode);
-        $this->prepareHandlers($config);
-        if (!empty($config['url'])) {
-            $resource = $this->createResource($config);
+        foreach ($resources as $resource) {
             $this->scheduler->schedule($resource, FrontierInterface::PRIORITY_HIGH);
-//            $this->processSingeItem($resource);
-//            return $this;
         }
-        if (!empty($config['frontier'])) {
-            if (!is_array($config['frontier']) && (!$config['frontier'] instanceof \Traversable)) {
-                throw new \InvalidArgumentException(sprintf('frontier param must be an array, "%s" given',
-                    gettype($config['frontier'])));
-            }
-            foreach ($config['frontier'] as $resourceConfig) {
-                if (!is_array($resourceConfig)) {
-                    throw new \InvalidArgumentException(sprintf('Resource config must be an array, "%s" given',
-                        gettype($resourceConfig)));
-                }
-                $priority = $resourceConfig['priority']?? FrontierInterface::PRIORITY_NORMAL;
-                if (!empty($resourceConfig['resource'])) {
-                    $resource = $resourceConfig['resource'];
-                } else {
-                    $resource = $this->createResource($resourceConfig);
-                }
-                $this->scheduler->schedule($resource, $priority);
-            }
-        }
-        while ($item = $this->currentItem = $this->scheduler->nextItem()) {
-            if ($item instanceof Resource) {
-                $this->processSingeItem($item);
-            }
-            if ($item instanceof BatchResource) {
-                $this->processBatch($item);
-            }
-        }
-        $this->logger->debug('No more Items to process');
+        $this->run();
         return $this;
     }
 
+    /**
+     * @param string ...$urls
+     * @return $this
+     */
+    public function scrapeUrls(string  ...$urls)
+    {
+        foreach ($urls as $url) {
+            $resource = HttpResource::fromUrl($url);
+            $this->scheduler->schedule($resource, FrontierInterface::PRIORITY_HIGH);
+        }
+        $this->run();
+        return $this;
+    }
 
     /**
-     * @param array $resourceConfig
-     * @return mixed|Resource
+     *
      */
-    protected function createResource(array $resourceConfig)
+    protected function run()
     {
-        $url = $resourceConfig['url']?? null;
-        $method = $resourceConfig['method']?? 'GET';
-        $body = $resourceConfig['body']?? null;
-        $headers = $resourceConfig['headers']?? [];
-        $type = $resourceConfig['type']?? 'default';
-        $resource = $resourceConfig['resource']??
-            new Resource($this->requestFactory->createRequest($method, $url, $headers, $body), $type);
-        return $resource;
+        do {
+            $checkIfFrontierEmpty = false;
+            $batch = [];
+            for ($i = 0; $i < $this->concurrency; $i++) {
+                $resource = $this->scheduler->nextItem();
+                if (empty($resource)) {
+                    break;
+                }
+                $batch[] = $resource;
+                $checkIfFrontierEmpty = true;
+            }
+            $batch && $this->processBatch(...$batch);
+        } while ($checkIfFrontierEmpty);
+        $this->logger->debug('No more Items to process');
     }
 
     /**
      * @param array $config
+     * @return Arachne
      */
-    protected function prepareHandlers(array $config)
+    public function addHandlers(array $config)
     {
         foreach ($config as $key => $value) {
             if (in_array($key, ['success', 'fail', 'always'])) {
@@ -320,6 +316,7 @@ class Arachne
             }
 
         }
+        return $this;
     }
 
     /**
@@ -329,7 +326,7 @@ class Arachne
     {
         foreach ($resultSet->getParsedResources() as $priority => $resData) {
             foreach ($resData as $newResource) {
-                $this->scheduler->schedule($newResource, $priority);
+                $this->scheduler->scheduleNewResources($newResource, $priority);
             }
         }
     }
@@ -354,15 +351,15 @@ class Arachne
     }
 
     /**
-     * @param Resource $resource
+     * @param HttpResource $resource
      * @param $resultSet
      * @param $response
      */
-    protected function saveBlobs(Resource $resource, ResultSet $resultSet, ResponseInterface $response)
+    protected function saveBlobs(HttpResource $resource, ResultSet $resultSet, string $content)
     {
         if ($resultSet->isBlob() || ($resource->getType() === 'blob')) {
             $blobsStorage = $this->docManager->getBlobsStorage();
-            $path = $blobsStorage->write($resource, (string)$response->getBody());
+            $path = $blobsStorage->write($resource, $content);
             $this->logger->debug(sprintf('Saving blob resource [%s] to [%s]', $resource->getUrl(), $path));
             if ($itemId = $resource->getMeta('related_id', null)) {
                 $itemType = $resource->getMeta('related_type');
@@ -383,8 +380,8 @@ class Arachne
     }
 
     protected function handleHttpFail(
-        Resource $resource,
-        ResponseInterface $response = null,
+        HttpResource $resource,
+        string $response = null,
         \Exception $exception = null
     ) {
         if ($handler = $this->getFailHandler($resource->getType())) {
@@ -401,7 +398,7 @@ class Arachne
         $this->shutdownOnException && $this->shutdown();
     }
 
-    protected function handleHttpSuccess(Resource $resource, ResponseInterface $response = null)
+    protected function handleHttpSuccess(HttpResource $resource, string $response = null)
     {
         $resultSet = new ResultSet($resource, $this->requestFactory);
         if ($handler = $this->getSuccessHandler($resource->getType())) {
@@ -422,11 +419,11 @@ class Arachne
     }
 
     /**
-     * @param Resource $resource
+     * @param HttpResource $resource
      * @param $response
      * @param $logger
      */
-    protected function handleResponse(Resource $resource, ResponseInterface $response = null)
+    protected function handleResponse(HttpResource $resource, string $response = null)
     {
         if ((!empty($response)) && $response->getStatusCode() === 200) {
             $this->handleHttpSuccess($resource, $response);
@@ -444,13 +441,11 @@ class Arachne
     /**
      * @param $batch
      */
-    protected function processBatch(BatchResource $batch)
+    protected function processBatch(HttpResource ... $resources)
     {
-        // @attention !!! You can not bind one Resource to another by passing thrid parameter to
-        // $resultSet->addResource(...) if you use InMemory adapter
-        //
         $wp = new \QXS\WorkerPool\WorkerPool();
-        $batchSize = $this->getWorkerPoolSize() ?: $batch->count();
+        $batchSize = $this->getConcurrency() ?: count($resources);
+        $batchSize = $batchSize > count($resources)? count($resources) :  $batchSize;
         $wp->setWorkerPoolSize($batchSize)
             ->create(new \QXS\WorkerPool\ClosureWorker(
                 /**
@@ -458,36 +453,92 @@ class Arachne
                  * @param \QXS\WorkerPool\Semaphore $semaphore the semaphore to synchronize calls accross all workers
                  * @param \ArrayObject $storage a persistent storage for the current child process
                  */
-                    function ($item, $semaphore, $storage) {
-                        //https://jira.mongodb.org/browse/PHPC-625
-                        //When using pcntl_fork() with the new MongoDB\Driver it is impossible to create a new
-                        // MongoDB manager in the child process if one has been opened in the parent process.
-                        //the newly created on in the child process seem to share a socket to MongoDB and throw
-                        // errors based on receiving each others responses.
-//                                $filter = $this->getFilter();
-//                                $frontier = $this->getFrontier();
-//                                $resultsStorage = $this->getResultsStorage();
-//                                foreach ([$filter, $frontier, $resultsStorage] as $_) {
-//                                    if (is_callable([$_, 'setManager'])) {
-//                                        $_->setManager(new \MongoDB\Driver\Manager("mongodb://localhost:27017/?x=" . posix_getpid()));
-//                                    }
-//                                }
-                        $this->processSingeItem($item);
-                        return $item;
+                    function ($resource, $semaphore, $storage) {
+                        $response = null;
+                        $request = $resource->getHttpRequest();
+                        try {
+                            $response = $this->client->sendRequest($request);
+                            return ['resource' => $resource, 'response' => $response, 'content' => $response->getBody()->getContents()];
+                        } catch (HttpRequestException $exception) {
+                            $this->logger->error('Got Exception during sending the Request ' . $resource->getUrl());
+                            $this->logger->error('Exception message: ' . ($exception->getPrevious() ?
+                                    $exception->getPrevious()->getMessage() : $exception->getMessage()));
+                            return ['resource' => $resource, 'response' => $response, 'exception' => $exception];
+                        }
                     }
                 )
             );
-        /** @var  $batch \Arachne\BatchResource */
-        foreach ($batch->getResources() as $resource) {
+        foreach ($resources as $resource) {
             $wp->run($resource);
         }
         $wp->waitForAllWorkers(); // wait for all workers
+        foreach ($wp as $result) {
+
+            try {
+                extract($result['data']);
+                /**
+                 * @var string $content
+                 * @var HttpResource $resource
+                 * @var ResponseInterface $response
+                 * @var \Exception $exception
+                 */
+                if (empty($exception)) {
+                    $this->scheduler->markVisited($resource);
+                    if ((!empty($response)) && $response->getStatusCode() === 200) {
+                        $this->handleHttpSuccess($resource, $content);
+                    } else {
+                        $this->handleHttpFail($resource, $content);
+                    }
+                } else {
+                    $this->failedResources[] = $resource;
+                    /**
+                     * @var $exception \Exception
+                     */
+                    switch (get_class($exception)) {
+                        case HttpRequestException::class:
+                            $this->handleHttpFail($resource, $content, $exception);
+                            break;
+                        case NoGatewaysLeftException::class:
+                            $this->handleException($resource, $content, $exception);
+                            //if script is still running due to shutdownOnException === false
+                            $this->shutdown();
+                            break;
+                        case GatewayException::class:
+                            $this->handleException($resource, $content, $exception);
+                            break;
+                    }
+
+                }
+
+            } catch (ParsingResponseException $exception) {
+                $this->logger->critical('Got Exception during parsing the Response from ' . $resource->getUrl());
+                $this->logger->critical('Exception message: ' . $exception->getMessage());
+                $this->handleException($resource, $content, $exception);
+            } catch (\Exception $exception) {
+                $this->logger->critical('Got Exception during sending the Request ' . $resource->getUrl());
+                $this->logger->critical('Exception message: ' . $exception->getMessage());
+                $this->failedResources[] = $resource;
+                $this->handleException($resource, $content, $exception);
+            } finally {
+                if ($handler = $this->getAlwaysHandler($resource->getType())) {
+                    try {
+                        $handler($content, $resource);
+                        $this->logger->debug(sprintf('Handler of the resource %s has been called', $resource->getUrl()));
+                    } catch (\Exception $exception) {
+                        $this->logger->critical(sprintf('Failed to handle resource %s. Reason: %s', $resource->getUrl(),
+                            $exception->getMessage()));
+                        $this->handleException($resource, $content, $exception);
+                    }
+                }
+            }
+        }
     }
 
     /**
      * @param $mode
+     * @return Arachne
      */
-    protected function prepareEnv($mode)
+    public function prepareEnv($mode = Mode::RESUME)
     {
         if ($mode === Mode::REFRESH) {
             $this->scheduler->clear();
@@ -497,6 +548,7 @@ class Arachne
             $this->docManager->getDocStorage()->clear();
             $this->docManager->getBlobsStorage()->clear();
         }
+        return $this;
     }
 
 }

@@ -8,7 +8,7 @@ $container = \Arachne\Service\Container::create();
 
 $httpRequest = $container->get()->requestFactory()
     ->createRequest('GET', 'http://httpbin.org/cookies/set?k2=v2&k1=v1');
-$resource = new \Arachne\Resource($httpRequest, 'cookie');
+$resource = new \Arachne\HttpResource($httpRequest, 'cookie');
 
 $container->get()->scraper()
     ->scrape([

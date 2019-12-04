@@ -7,7 +7,7 @@ class ResourceTest extends \PHPUnit_Framework_TestCase
     public function setUp()
     {
         $request = new \Zend\Diactoros\Request('https://example.com/foo/bar?a=b#hash', 'GET');
-        $this->resource = new \Arachne\Resource($request, 'foo');
+        $this->resource = new \Arachne\HttpResource($request, 'foo');
     }
 
     public function testGetters()
@@ -58,7 +58,7 @@ class ResourceTest extends \PHPUnit_Framework_TestCase
         $request = $this->getMockBuilder(\Zend\Diactoros\Request::class)
             ->disableOriginalConstructor()->setMethods(['getHeaders'])->getMock();
         $request->expects($this->once())->method('getHeaders');
-        $resource = new \Arachne\Resource($request, 'foo');
+        $resource = new \Arachne\HttpResource($request, 'foo');
         $resource->getHeaders();
     }
 }

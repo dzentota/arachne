@@ -5,7 +5,7 @@ namespace Arachne\Tests;
 use Http\Message\MessageFactory\DiactorosMessageFactory;
 use Arachne\Frontier\FrontierInterface;
 use Arachne\Item;
-use Arachne\Resource;
+use Arachne\HttpResource;
 use Arachne\ResultSet;
 use Zend\Diactoros\Request;
 
@@ -13,7 +13,7 @@ class ResultSetTest extends \PHPUnit_Framework_TestCase
 {
     public function testResources()
     {
-        $resource = new Resource(new Request('localhost', 'GET'), 'test');
+        $resource = new HttpResource(new Request('localhost', 'GET'), 'test');
         $requestFactory = new DiactorosMessageFactory();
         $resultSet = new ResultSet($resource, $requestFactory);
         $this->assertEquals($resource, $resultSet->getResource());
@@ -22,7 +22,7 @@ class ResultSetTest extends \PHPUnit_Framework_TestCase
 
     public function testParsedResources()
     {
-        $resource = new Resource(new Request('localhost', 'GET'), 'test');
+        $resource = new HttpResource(new Request('localhost', 'GET'), 'test');
         $requestFactory = new DiactorosMessageFactory();
         $resultSet = new ResultSet($resource, $requestFactory);
 
@@ -63,7 +63,7 @@ class ResultSetTest extends \PHPUnit_Framework_TestCase
 
     public function testItems()
     {
-        $resource = new Resource(new Request('localhost', 'GET'), 'test');
+        $resource = new HttpResource(new Request('localhost', 'GET'), 'test');
         $resource->setMeta(['related_type' => 'related type', 'related_id'=>123]);
         $requestFactory = new DiactorosMessageFactory();
         $resultSet = new ResultSet($resource, $requestFactory);
@@ -80,7 +80,7 @@ class ResultSetTest extends \PHPUnit_Framework_TestCase
 
     public function testBlob()
     {
-        $resource = new Resource(new Request('localhost', 'GET'), 'test');
+        $resource = new HttpResource(new Request('localhost', 'GET'), 'test');
         $requestFactory = new DiactorosMessageFactory();
         $resultSet = new ResultSet($resource, $requestFactory);
 
@@ -91,7 +91,7 @@ class ResultSetTest extends \PHPUnit_Framework_TestCase
 
     public function testPackInBatch()
     {
-        $resource = new Resource(new Request('localhost', 'GET'), 'test');
+        $resource = new HttpResource(new Request('localhost', 'GET'), 'test');
         $requestFactory = new DiactorosMessageFactory();
         $resultSet = new ResultSet($resource, $requestFactory);
 

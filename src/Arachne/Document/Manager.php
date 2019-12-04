@@ -3,7 +3,7 @@
 namespace Arachne\Document;
 
 use Arachne\BlobsStorage\BlobsStorageInterface;
-use Arachne\Resource;
+use Arachne\HttpResource;
 
 class Manager
 {
@@ -33,10 +33,10 @@ class Manager
     }
 
     /**
-     * @param \Arachne\Resource|Resource $resource
+     * @param \Arachne\HttpResource|HttpResource $resource
      * @return mixed
      */
-    public function getBoundDocument(Resource $resource)
+    public function getBoundDocument(HttpResource $resource)
     {
         $meta = $resource->getMeta();
         return $this->getDocument($meta['item_type'], $meta['item_id']);
@@ -53,10 +53,10 @@ class Manager
     }
 
     /**
-     * @param \Arachne\Resource|Resource  $resource
+     * @param \Arachne\HttpResource|HttpResource  $resource
      * @param array $data
      */
-    public function updateBoundDocument(Resource $resource, array $data)
+    public function updateBoundDocument(HttpResource $resource, array $data)
     {
         $meta = $resource->getMeta();
         $this->updateDocument($meta['item_type'], $meta['item_id'], $data);
@@ -74,20 +74,20 @@ class Manager
 
 
     /**
-     * @param \Arachne\Resource $resource
+     * @param \Arachne\HttpResource $resource
      * @param $docType
      * @param $docId
      */
-    public function bindResourceToDoc(Resource $resource, string $docType, string $docId)
+    public function bindResourceToDoc(HttpResource $resource, string $docType, string $docId)
     {
         $resource->setMeta(['item_id' => $docId, 'item_type' => $docType]);
     }
 
     /**
-     * @param \Arachne\Resource $resource
+     * @param \Arachne\HttpResource $resource
      * @return bool
      */
-    public function isBoundToDoc(Resource $resource)
+    public function isBoundToDoc(HttpResource $resource)
     {
         return $resource->getMeta('item_id', false) && $resource->getMeta('item_type', false);
     }

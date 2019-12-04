@@ -2,7 +2,7 @@
 
 namespace Arachne\Filter;
 
-use Arachne\Resource;
+use Arachne\HttpResource;
 
 /**
  * Class InMemory
@@ -17,30 +17,30 @@ class InMemory implements FilterInterface
 
     /**
      * @param string $filterName
-     * @param Resource $resource
+     * @param HttpResource $resource
      * @return mixed|void
      */
-    public function add(string $filterName, Resource $resource)
+    public function add(string $filterName, HttpResource $resource)
     {
         $this->hash[$filterName][$resource->getHash()] = true;
     }
 
     /**
      * @param string $filterName
-     * @param Resource $resource
+     * @param HttpResource $resource
      * @return mixed|void
      */
-    public function remove(string $filterName, Resource $resource)
+    public function remove(string $filterName, HttpResource $resource)
     {
         unset($this->hash[$filterName][$resource->getHash()]);
     }
 
     /**
      * @param string $filterName
-     * @param Resource $resource
+     * @param HttpResource $resource
      * @return bool
      */
-    public function exists(string $filterName, Resource $resource) : bool
+    public function exists(string $filterName, HttpResource $resource) : bool
     {
         return isset($this->hash[$filterName][$resource->getHash()]);
     }

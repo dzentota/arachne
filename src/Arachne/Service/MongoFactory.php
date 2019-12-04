@@ -50,7 +50,7 @@ class MongoFactory extends GenericFactory
      */
     protected function getMongoDbClient(): \MongoDB\Client
     {
-        $client = new \MongoDB\Client();
+        $client = new \MongoDB\Client('mongodb://mongo', ['username' => 'root', 'password' => 'root']);
         return $client;
     }
 

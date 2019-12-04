@@ -3,7 +3,7 @@
 namespace Arachne\BlobsStorage;
 
 use Gaufrette\Filesystem;
-use Arachne\Resource;
+use Arachne\HttpResource;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -77,10 +77,10 @@ class Gaufrette implements BlobsStorageInterface
     }
 
     /**
-     * @param Resource $resource
+     * @param HttpResource $resource
      * @return string
      */
-    protected function getPath(Resource $resource)
+    protected function getPath(HttpResource $resource)
     {
         $url = $resource->getHttpRequest()->getUri();
         $url = preg_replace('/^[a-z0-9]+:\/\//', '', $url);
@@ -107,10 +107,10 @@ class Gaufrette implements BlobsStorageInterface
 
     /**
      * @param string $fileName
-     * @param \Arachne\Resource|Resource $resource
+     * @param \Arachne\HttpResource|HttpResource $resource
      * @return string
      */
-    protected function truncate(string $fileName, Resource $resource)
+    protected function truncate(string $fileName, HttpResource $resource)
     {
         if ($this->strlen($fileName) > self::MAX_NAME) {
             $extension = pathinfo($fileName, PATHINFO_EXTENSION);
@@ -156,12 +156,12 @@ class Gaufrette implements BlobsStorageInterface
     }
 
     /**
-     * @param \Arachne\Resource $resource
+     * @param \Arachne\HttpResource $resource
      * @param string $contents
      * @param bool $overwrite
      * @return mixed
      */
-    public function write(Resource $resource, string $contents = '', bool $overwrite = true)
+    public function write(HttpResource $resource, string $contents = '', bool $overwrite = true)
     {
         $path = $this->getPath($resource);
         $this->logger->debug(sprintf('Saving blob resource [%s] to [%s]', $resource->getUrl(), $path));
@@ -170,10 +170,10 @@ class Gaufrette implements BlobsStorageInterface
     }
 
     /**
-     * @param \Arachne\Resource|Resource $resource
+     * @param \Arachne\HttpResource|HttpResource $resource
      * @return mixed
      */
-    public function read(Resource $resource)
+    public function read(HttpResource $resource)
     {
         $path = $this->getPath($resource);
         $this->logger->debug(sprintf('Reading [%s] from the Blobs Storage', $path));
@@ -181,10 +181,10 @@ class Gaufrette implements BlobsStorageInterface
     }
 
     /**
-     * @param \Arachne\Resource|Resource $resource
+     * @param \Arachne\HttpResource|HttpResource $resource
      * @return mixed
      */
-    public function exists(Resource $resource)
+    public function exists(HttpResource $resource)
     {
         $path = $this->getPath($resource);
         $this->logger->debug(sprintf('Checking if [%s] exists in Blobs Storage',$path));
@@ -192,10 +192,10 @@ class Gaufrette implements BlobsStorageInterface
     }
 
     /**
-     * @param \Arachne\Resource|Resource $resource
+     * @param \Arachne\HttpResource|HttpResource $resource
      * @return mixed
      */
-    public function delete(Resource $resource)
+    public function delete(HttpResource $resource)
     {
         $path = $this->getPath($resource);
         $this->logger->debug(sprintf('Deleting [%s] from the Blobs Storage', $path));
@@ -211,7 +211,7 @@ class Gaufrette implements BlobsStorageInterface
         $keys = $this->keys();
         foreach($keys as $key) {
             try {
-                $this->getFilesystem()->delete($key);
+                @$this->getFilesystem()->delete($key);
             } catch (\Exception $exception) {
                 $this->logger->critical($exception->getMessage());
             }

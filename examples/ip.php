@@ -39,8 +39,8 @@ $container = \Arachne\Service\Container::create(new \Arachne\Service\Proxy(
 //// create $proxy to contain the ip:port ready to use
 //            $proxy = $json['proxy'];
             $gatewayServers = [
-               GatewayServer::fromString('https://202.178.123.124:30231'),
-                GatewayServer::fromString('https://182.253.123.9:3128'),
+               GatewayServer::fromString('128.199.178.123:8000'),
+                GatewayServer::fromString('43.231.215.250:57716'),
 //                GatewayServer::fromString('217.219.20.136:8080'),
 //                GatewayServer::fromString('178.128.115.98:8080'),
             ];

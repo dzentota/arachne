@@ -2,14 +2,14 @@ version: '3.1'
 services:
   mongo:
     image: mongo
-    restart: always
+#    restart: always
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: root
 
   mongo-express:
     image: mongo-express
-    restart: always
+#    restart: always
     ports:
     - 8081:8081
     environment:
@@ -27,14 +27,14 @@ services:
       APACHE_EXTENSION_EXPIRES: 1
       APACHE_LOG_DIR: '/var/log/apache2'
       #      PHP_EXTENSION_XDEBUG: 1
-#      PHP_EXTENSIONS: bcmath blackfire calendar dba exif gd gettext gmp imap intl ldap mcrypt memcached mongodb sockets sysvmsg sysvsem sysvshm pcntl tidy xdebug xmlrpc xsl
-      PHP_EXTENSIONS: bcmath blackfire calendar dba exif gd gettext gmp imap intl ldap mcrypt memcached mongodb sockets sysvmsg sysvsem sysvshm pcntl tidy xmlrpc xsl
-#      PHP_INI_XDEBUG__REMOTE_AUTOSTART: 1
+      PHP_EXTENSIONS: bcmath blackfire calendar dba exif gd gettext gmp imap intl ldap mcrypt memcached mongodb sockets sysvmsg sysvsem sysvshm pcntl tidy xdebug xmlrpc xsl
+#      PHP_EXTENSIONS: bcmath blackfire calendar dba exif gd gettext gmp imap intl ldap mcrypt memcached mongodb sockets sysvmsg sysvsem sysvshm pcntl tidy xmlrpc xsl
+      PHP_INI_XDEBUG__REMOTE_AUTOSTART: 1
       #serverName=SomeName, where SomeName is the name of the server configured in Settings / Preferences | Languages & Frameworks | PHP | Servers
       PHP_IDE_CONFIG: "serverName=Docker"
     depends_on:
     - mongo
-    ports:
-    - 8585:80
+#    ports:
+#    - 8585:80
     volumes:
     - .:/var/www/html:rw

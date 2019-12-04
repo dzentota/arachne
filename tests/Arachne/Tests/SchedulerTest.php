@@ -6,7 +6,7 @@ use Psr\Log\NullLogger;
 use Arachne\Filter\InMemory as InMemoryFilter;
 use Arachne\Frontier\FrontierInterface;
 use Arachne\Frontier\InMemory as InMemoryFrontier;
-use Arachne\Resource;
+use Arachne\HttpResource;
 use Arachne\Scheduler;
 use Zend\Diactoros\Request;
 
@@ -37,7 +37,7 @@ class SchedulerTest extends \PHPUnit_Framework_TestCase
             ->setMethods(['isScheduled', 'isVisited', 'markScheduled'])
             ->getMock();
 
-        $item = new Resource(new Request('localhost'), 'test');
+        $item = new HttpResource(new Request('localhost'), 'test');
 
         $scheduler->expects($this->once())->method('isScheduled')->with($item)->will($this->returnValue(true));
         $scheduler->expects($this->never())->method('isVisited');
@@ -63,7 +63,7 @@ class SchedulerTest extends \PHPUnit_Framework_TestCase
             ->setMethods(['isScheduled', 'isVisited', 'markScheduled'])
             ->getMock();
 
-        $item = new Resource(new Request('localhost'), 'test');
+        $item = new HttpResource(new Request('localhost'), 'test');
 
         $scheduler->expects($this->once())->method('isScheduled')->with($item)->will($this->returnValue(false));
         $scheduler->expects($this->once())->method('isVisited')->with($item)->will($this->returnValue(true));
@@ -88,7 +88,7 @@ class SchedulerTest extends \PHPUnit_Framework_TestCase
             ->setMethods(['isScheduled', 'isVisited', 'markScheduled'])
             ->getMock();
 
-        $item = new Resource(new Request('localhost'), 'test');
+        $item = new HttpResource(new Request('localhost'), 'test');
 
         $scheduler->expects($this->once())->method('isScheduled')->with($item)->will($this->returnValue(false));
         $scheduler->expects($this->once())->method('isVisited')->with($item)->will($this->returnValue(false));

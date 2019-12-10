@@ -8,6 +8,7 @@ use Http\Message\RequestFactory;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerInterface;
+use QXS\WorkerPool\WorkerPool;
 use Respect\Validation\Exceptions\NestedValidationException;
 use Arachne\Client\ClientInterface;
 use Arachne\Exceptions\HttpRequestException;
@@ -71,6 +72,10 @@ class Arachne
 
     private $parentPid = 0;
 
+    /**
+     * @var WorkerPool
+     */
+    private $workerPool;
 
     /**
      * Arachne constructor.
@@ -242,15 +247,25 @@ class Arachne
 
 
     /**
-     * @param HttpResource[] $resources
+     * @param HttpResource ...$resources
      * @return Arachne
      */
     public function scrape(HttpResource ...$resources)
     {
+        $this->schedule(...$resources);
+        $this->run();
+        return $this;
+    }
+
+    /**
+     * @param HttpResource ...$resources
+     * @return Arachne
+     */
+    public function schedule(HttpResource ...$resources)
+    {
         foreach ($resources as $resource) {
             $this->scheduler->schedule($resource, FrontierInterface::PRIORITY_HIGH);
         }
-        $this->run();
         return $this;
     }
 
@@ -260,11 +275,21 @@ class Arachne
      */
     public function scrapeUrls(string  ...$urls)
     {
+        $this->scheduleUrls(...$urls);
+        $this->run();
+        return $this;
+    }
+
+    /**
+     * @param string ...$urls
+     * @return $this
+     */
+    public function scheduleUrls(string ...$urls)
+    {
         foreach ($urls as $url) {
             $resource = HttpResource::fromUrl($url);
             $this->scheduler->schedule($resource, FrontierInterface::PRIORITY_HIGH);
         }
-        $this->run();
         return $this;
     }
 
@@ -444,34 +469,7 @@ class Arachne
      */
     protected function processBatch(HttpResource ... $resources)
     {
-        $wp = new \QXS\WorkerPool\WorkerPool();
-        $batchSize = $this->getConcurrency() ?: count($resources);
-        $batchSize = $batchSize > count($resources)? count($resources) :  $batchSize;
-        $wp->setWorkerPoolSize($batchSize)
-            ->create(new \QXS\WorkerPool\ClosureWorker(
-                /**
-                 * @param mixed $input the input from the WorkerPool::run() Method
-                 * @param \QXS\WorkerPool\Semaphore $semaphore the semaphore to synchronize calls accross all workers
-                 * @param \ArrayObject $storage a persistent storage for the current child process
-                 */
-                    function ($resource, $semaphore, $storage) {
-                        $response = null;
-                        $request = $resource->getHttpRequest();
-                        try {
-                            $response = $this->client->sendRequest($request);
-                            /**
-                             * Serialize Response object to forward stream contents to parent process
-                             */
-                            return ['resource' => $resource, 'serializedResponse' => \Zend\Diactoros\Response\Serializer::toString($response)];
-                        } catch (HttpRequestException $exception) {
-                            $this->logger->error('Got Exception during sending the Request ' . $resource->getUrl());
-                            $this->logger->error('Exception message: ' . ($exception->getPrevious() ?
-                                    $exception->getPrevious()->getMessage() : $exception->getMessage()));
-                            return ['resource' => $resource, 'serializedResponse' => \Zend\Diactoros\Response\Serializer::toString($response), 'exception' => $exception];
-                        }
-                    }
-                )
-            );
+        $wp = $this->getWorkerPool(...$resources);
         foreach ($resources as $resource) {
             $wp->run($resource);
         }
@@ -554,6 +552,50 @@ class Arachne
             $this->docManager->getBlobsStorage()->clear();
         }
         return $this;
+    }
+
+    /**
+     * @param HttpResource[] $resources
+     * @return WorkerPool
+     * @throws \QXS\WorkerPool\WorkerPoolException
+     */
+    protected function getWorkerPool(HttpResource ... $resources): WorkerPool
+    {
+        /**
+         * Skip creation of new Workers to prevent error:
+         * socket_create_pair(): unable to create socket pair [24]: Too many open files
+         */
+        if (!isset($this->workerPool)) {
+            $this->workerPool = new \QXS\WorkerPool\WorkerPool();
+            $batchSize = $this->getConcurrency() ?: count($resources);
+            $batchSize = $batchSize > count($resources)? count($resources) :  $batchSize;
+            $this->workerPool->setWorkerPoolSize($batchSize)
+                ->create(new \QXS\WorkerPool\ClosureWorker(
+                    /**
+                     * @param mixed $input the input from the WorkerPool::run() Method
+                     * @param \QXS\WorkerPool\Semaphore $semaphore the semaphore to synchronize calls accross all workers
+                     * @param \ArrayObject $storage a persistent storage for the current child process
+                     */
+                        function ($resource, $semaphore, $storage) {
+                            $response = null;
+                            $request = $resource->getHttpRequest();
+                            try {
+                                $response = $this->client->sendRequest($request);
+                                /**
+                                 * Serialize Response object to forward stream contents to parent process
+                                 */
+                                return ['resource' => $resource, 'serializedResponse' => \Zend\Diactoros\Response\Serializer::toString($response)];
+                            } catch (HttpRequestException $exception) {
+                                $this->logger->error('Got Exception during sending the Request ' . $resource->getUrl());
+                                $this->logger->error('Exception message: ' . ($exception->getPrevious() ?
+                                        $exception->getPrevious()->getMessage() : $exception->getMessage()));
+                                return ['resource' => $resource, 'serializedResponse' => \Zend\Diactoros\Response\Serializer::toString($response), 'exception' => $exception];
+                            }
+                        }
+                    )
+                );
+        }
+        return $this->workerPool;
     }
 
 }

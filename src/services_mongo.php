@@ -31,6 +31,6 @@ $container['filter'] = function ($c) {
 };
 
 $container['mongoDbClient'] = function ($c) {
-    $client = new \MongoDB\Client('mongodb://mongo', ['username' => 'root', 'password' => 'root']);
+    $client = new \MongoDB\Client('mongodb://localhost:27017');
     return $client;
 };

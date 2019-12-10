@@ -42,9 +42,10 @@ use \Bramus\Monolog\Formatter\ColoredLineFormatter;
 $container = new Container();
 
 $container['HTTP_MAX_RETRIES'] = 2;
+$container['LOGGER_LEVEL'] = \Monolog\Logger::DEBUG;
 
 $container['logger'] = function ($c) {
-    $stream = new StreamHandler('php://stderr', \Monolog\Logger::DEBUG);
+    $stream = new StreamHandler('php://stderr', $c['LOGGER_LEVEL']);
     $formatter = new ColoredLineFormatter();
     $stream->setFormatter($formatter);
     $logger = new \Monolog\Logger('Arachne');
@@ -55,6 +56,7 @@ $container['logger'] = function ($c) {
 $container['frontier'] = function ($c) {
     $logger = $c['logger'];
     $frontier = new FrontierLogger(new InMemoryFrontier(new \SplPriorityQueue()), $logger);
+//    $frontier = new InMemoryFrontier(new \SplPriorityQueue());
     return $frontier;
 };
 

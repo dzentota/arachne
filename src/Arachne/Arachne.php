@@ -104,7 +104,7 @@ class Arachne
                 $this->logger->debug('Shutting down parent process');
                 if ($this->reschedulePreviouslyFailedResources && count($this->failedResources)) {
                     $this->logger->debug('Rescheduling failed resources for the next run');
-                    $failedResources[] = $this->failedResources;
+                    $failedResources = $this->failedResources;
                     $this->failedResources = [];
                     foreach ($failedResources as $failedResource) {
                         $this->scheduler->schedule($failedResource);
@@ -179,8 +179,8 @@ class Arachne
 
     protected function handleException(
         HttpResource $resource,
-        ResponseInterface $response = null,
-        \Exception $exception = null
+        ?ResponseInterface $response = null,
+        ?\Exception $exception = null
     ) {
         if ($handler = $this->getExceptionHandler($resource->getType())) {
             try {
@@ -406,7 +406,7 @@ class Arachne
 
     protected function handleHttpFail(
         HttpResource $resource,
-        ResponseInterface $response = null,
+        ?ResponseInterface $response = null,
         \Exception $exception = null
     ) {
         if ($handler = $this->getFailHandler($resource->getType())) {
@@ -477,14 +477,23 @@ class Arachne
         foreach ($wp as $result) {
 
             try {
+                if (empty($result['data'])) {
+                    $this->logger->error('Got empty result from Worker');
+                    continue;
+                }
+                $response = null;
                 /**
                  * @var HttpResource $resource
                  * @var string $serializedResponse
                  * @var \Exception $exception
                  */
                 extract($result['data'], EXTR_OVERWRITE);
-                $response = \Zend\Diactoros\Response\Serializer::fromString($serializedResponse);
-
+                if (isset($serializedResponse)) {
+                    $response = \Zend\Diactoros\Response\Serializer::fromString($serializedResponse);
+                }
+                if (isset($exceptionData)) {
+                    $exception = new $exceptionData['class']($exceptionData['message']);
+                }
                 if (!isset($exception)) {
                     $this->scheduler->markVisited($resource);
                     if (isset($response) && $response->getStatusCode() === 200) {
@@ -493,6 +502,7 @@ class Arachne
                         $this->handleHttpFail($resource, $response);
                     }
                 } else {
+
                     $this->failedResources[] = $resource;
                     /**
                      * @var $exception \Exception
@@ -585,11 +595,12 @@ class Arachne
                                  * Serialize Response object to forward stream contents to parent process
                                  */
                                 return ['resource' => $resource, 'serializedResponse' => \Zend\Diactoros\Response\Serializer::toString($response)];
-                            } catch (HttpRequestException $exception) {
-                                $this->logger->error('Got Exception during sending the Request ' . $resource->getUrl());
-                                $this->logger->error('Exception message: ' . ($exception->getPrevious() ?
-                                        $exception->getPrevious()->getMessage() : $exception->getMessage()));
-                                return ['resource' => $resource, 'serializedResponse' => \Zend\Diactoros\Response\Serializer::toString($response), 'exception' => $exception];
+                            } catch (\Exception $exception) {
+                                $this->logger->error('Got Exception: ' . $exception->getMessage(). ', during sending the Request ' . $resource->getUrl());
+                                if ($exception->getPrevious()) {
+                                    $this->logger->error('Previous exception message: ' . $exception->getPrevious()->getMessage());
+                                }
+                                return ['resource' => $resource, 'serializedResponse' => $response? \Zend\Diactoros\Response\Serializer::toString($response) : null, 'exceptionData' => ['class' => get_class($exception), 'message' => $exception->getMessage()]];
                             }
                         }
                     )

@@ -124,6 +124,11 @@ class Arachne
         return $this->concurrency;
     }
 
+    public function setConcurrency(int $concurrency): self
+    {
+        $this->concurrency = $concurrency;
+        return $this;
+    }
 
     public function getCurrentItem()
     {
@@ -577,8 +582,7 @@ class Arachne
          */
         if (!isset($this->workerPool)) {
             $this->workerPool = new \QXS\WorkerPool\WorkerPool();
-            $batchSize = $this->getConcurrency() ?: count($resources);
-            $batchSize = $batchSize > count($resources)? count($resources) :  $batchSize;
+            $batchSize = $this->getConcurrency() > count($resources)? count($resources) :  $this->getConcurrency();
             $this->workerPool->setWorkerPoolSize($batchSize)
                 ->create(new \QXS\WorkerPool\ClosureWorker(
                     /**

@@ -43,6 +43,9 @@ $container = new Container();
 
 $container['HTTP_MAX_RETRIES'] = 2;
 $container['LOGGER_LEVEL'] = \Monolog\Logger::DEBUG;
+$container['CONNECT_TIMEOUT'] = 5;
+$container['TIMEOUT'] = 5;
+$container['MAX_REDIRECTS'] = 5;
 
 $container['logger'] = function ($c) {
     $stream = new StreamHandler('php://stderr', $c['LOGGER_LEVEL']);
@@ -193,12 +196,12 @@ $container['createHttpClient'] = function ($c) {
 
     $client = new Client([
         'handler' => $stack,
-        'connect_timeout' => 5,
-        'timeout' => 5,
+        'connect_timeout' => $c['CONNECT_TIMEOUT'],
+        'timeout' => $c['TIMEOUT'],
         'http_errors' => false,
         'verify' => false,
         'allow_redirects' => [
-            'max' => 5,
+            'max' => $c['MAX_REDIRECTS'],
             'protocols' => ['http', 'https'],
             'strict' => false,
             'track_redirects' => true,

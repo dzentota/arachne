@@ -4,6 +4,8 @@ namespace Arachne;
 
 use Arachne\Exceptions\GatewayException;
 use Arachne\Exceptions\NoGatewaysLeftException;
+use Arachne\Identity\Identity;
+use Arachne\Identity\IdentityRotatorInterface;
 use Http\Message\RequestFactory;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -29,6 +31,11 @@ class Arachne
      * @var ClientInterface
      */
     private $client;
+
+    /**
+     * @var IdentityRotatorInterface
+     */
+    private $identityRotator;
 
     /**
      * @var Scheduler
@@ -81,6 +88,7 @@ class Arachne
      * Arachne constructor.
      * @param LoggerInterface $logger
      * @param ClientInterface $client
+     * @param IdentityRotatorInterface $identityRotator
      * @param Scheduler $scheduler
      * @param Document\Manager $docManager
      * @param RequestFactory $requestFactory
@@ -88,6 +96,7 @@ class Arachne
     public function __construct(
         LoggerInterface $logger,
         ClientInterface $client,
+        IdentityRotatorInterface $identityRotator,
         Scheduler $scheduler,
         Document\Manager $docManager,
         RequestFactory $requestFactory
@@ -95,6 +104,7 @@ class Arachne
         $this->parentPid = getmypid();
         $this->logger = $logger;
         $this->client = $client;
+        $this->identityRotator = $identityRotator;
         $this->scheduler = $scheduler;
         $this->docManager = $docManager;
         $this->requestFactory = $requestFactory;
@@ -474,9 +484,19 @@ class Arachne
      */
     protected function processBatch(HttpResource ... $resources)
     {
-        $wp = $this->getWorkerPool(...$resources);
+        $wp = $this->getWorkerPool();
         foreach ($resources as $resource) {
-            $wp->run($resource);
+            /**
+             * Identity rotator can not be used directly in worker because all workers share
+             * parent's memory and will have the same list of proxies and other settings in such case
+             */
+            $identity = $this->identityRotator->switchIdentityFor($resource->getHttpRequest());
+            $this->client->ensureIdentityIsCompatibleWithClient($identity);
+            /**
+             * Prepare config because Identity can not be serialized, so can not be passed to worker
+             */
+            $config = $this->client->prepareConfig([], $identity);
+            $wp->run(['resource' => $resource, 'config' => $config]);
         }
         $wp->waitForAllWorkers(); // wait for all workers
         foreach ($wp as $result) {
@@ -570,11 +590,10 @@ class Arachne
     }
 
     /**
-     * @param HttpResource[] $resources
      * @return WorkerPool
      * @throws \QXS\WorkerPool\WorkerPoolException
      */
-    protected function getWorkerPool(HttpResource ... $resources): WorkerPool
+    protected function getWorkerPool(): WorkerPool
     {
         /**
          * Skip creation of new Workers to prevent error:
@@ -582,24 +601,33 @@ class Arachne
          */
         if (!isset($this->workerPool)) {
             $this->workerPool = new \QXS\WorkerPool\WorkerPool();
-            $batchSize = $this->getConcurrency() > count($resources)? count($resources) :  $this->getConcurrency();
-            $this->workerPool->setWorkerPoolSize($batchSize)
+            $this->workerPool->setWorkerPoolSize($this->getConcurrency())
                 ->create(new \QXS\WorkerPool\ClosureWorker(
                     /**
                      * @param mixed $input the input from the WorkerPool::run() Method
                      * @param \QXS\WorkerPool\Semaphore $semaphore the semaphore to synchronize calls accross all workers
                      * @param \ArrayObject $storage a persistent storage for the current child process
                      */
-                        function ($resource, $semaphore, $storage) {
+                        function ($input, $semaphore, $storage) {
+                            /**
+                             * @var HttpResource $resource
+                             */
+                            $resource = $input['resource'];
+                            /**
+                             * @var Identity $identity
+                             */
+                            $requestConfig = $input['config'];
                             $response = null;
                             $request = $resource->getHttpRequest();
                             try {
-                                $response = $this->client->sendRequest($request);
+                                $response = $this->client->sendRequest($request, $requestConfig);
+                                $this->identityRotator->evaluateResult($response);
                                 /**
                                  * Serialize Response object to forward stream contents to parent process
                                  */
                                 return ['resource' => $resource, 'serializedResponse' => \Zend\Diactoros\Response\Serializer::toString($response)];
                             } catch (\Exception $exception) {
+                                $this->identityRotator->evaluateResult(null);
                                 $this->logger->error('Got Exception: ' . $exception->getMessage(). ', during sending the Request ' . $resource->getUrl());
                                 if ($exception->getPrevious()) {
                                     $this->logger->error('Previous exception message: ' . $exception->getPrevious()->getMessage());

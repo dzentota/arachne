@@ -59,6 +59,11 @@ class Gateway implements GatewayInterface
 
     }
 
+    public function setGatewayServer(GatewayServer $gatewayServer)
+    {
+        $this->gatewayServer = $gatewayServer;
+    }
+
     public function getGatewayProfile()
     {
         return $this->gatewayProfile;

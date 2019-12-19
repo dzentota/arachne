@@ -2,12 +2,10 @@
 
 namespace Arachne\Client;
 
-use Arachne\Identity\IdentityRotatorInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Arachne\Client\Events\RequestPrepared;
 use Arachne\Client\Events\ResponseReceived;
-use Arachne\Exceptions\HttpRequestException;
 use Arachne\Identity\Identity;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
@@ -19,52 +17,34 @@ abstract class GenericClient implements ClientInterface
      */
     protected $eventDispatcher;
 
-    private $identityRotator;
-
     /**
      * GuzzleClient constructor.
      * @param EventDispatcherInterface $eventDispatcher
-     * @param IdentityRotatorInterface $identityRotator
      */
-    public function __construct(EventDispatcherInterface $eventDispatcher, IdentityRotatorInterface $identityRotator)
+    public function __construct(EventDispatcherInterface $eventDispatcher)
     {
         $this->eventDispatcher = $eventDispatcher;
-        $this->identityRotator = $identityRotator;
     }
 
     public function sendRequest(RequestInterface $request, array $requestConfig = []): ResponseInterface
     {
-        $this->identityRotator->switchIdentityFor($request);
-        $identity = $this->identityRotator->getCurrentIdentity();
-            $this->ensureIdentityIsCompatibleWithClient($identity);
-        $config = $this->prepareConfig($requestConfig, $identity);
-        try {
-            $this->eventDispatcher->dispatch(RequestPrepared::name, new RequestPrepared($request, $config));
-            $response = $this->sendHTTPRequest($request, $config);
-            $this->eventDispatcher->dispatch(ResponseReceived::name, new ResponseReceived($request, $response));
-        } catch (\Exception $exception) {
-            $this->getIdentityRotator()->evaluateResult(null);
-            throw new HttpRequestException('Failed to send HTTP Request', 0, $exception);
-        }
-        $this->identityRotator->evaluateResult($response);
+        $this->eventDispatcher->dispatch(RequestPrepared::name, new RequestPrepared($request, $requestConfig));
+        $response = $this->sendHTTPRequest($request, $requestConfig);
+        $this->eventDispatcher->dispatch(ResponseReceived::name, new ResponseReceived($request, $response));
         return $response;
     }
 
-    public function getIdentityRotator(): IdentityRotatorInterface
-    {
-        return $this->identityRotator;
-    }
     /**
      * @param $identity
      */
-    abstract protected function ensureIdentityIsCompatibleWithClient(Identity $identity);
+    abstract public function ensureIdentityIsCompatibleWithClient(Identity $identity);
 
     /**
      * @param array $requestConfig
      * @param $identity
      * @return mixed
      */
-    abstract protected function prepareConfig(
+    abstract public function prepareConfig(
         array $requestConfig,
         Identity $identity
     ): array;

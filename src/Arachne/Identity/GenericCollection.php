@@ -1,32 +1,24 @@
 <?php
 
-namespace Arachne;
+namespace Arachne\Identity;
 
 /**
  * Class GenericCollection
  * @package Arachne
  */
-abstract class GenericCollection implements \IteratorAggregate, \Countable
+abstract class GenericCollection implements Collection, \IteratorAggregate, \Countable
 {
-    /**
-     * @var
-     */
-    protected $values = [];
-
     /**
      * @return array
      */
-    public function toArray(): array
-    {
-        return $this->values;
-    }
+    public abstract function toArray(): array;
 
     /**
      * @return \ArrayIterator
      */
     public function getIterator()
     {
-        return new \ArrayIterator($this->values);
+        return new \ArrayIterator($this->toArray());
     }
 
     /**
@@ -40,7 +32,7 @@ abstract class GenericCollection implements \IteratorAggregate, \Countable
      */
     public function count(): int
     {
-        return count($this->values);
+        return count($this->toArray());
     }
 
     /**
@@ -50,7 +42,7 @@ abstract class GenericCollection implements \IteratorAggregate, \Countable
      */
     public function slice($offset, $length = null)
     {
-        $slice = array_slice($this->values, $offset, $length);
+        $slice = array_slice($this->toArray(), $offset, $length);
         return new static(...$slice);
     }
 }

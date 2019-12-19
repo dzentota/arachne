@@ -120,10 +120,11 @@ $container['filesystem'] = function ($c) {
 $container['scraper'] = function ($c) {
     $logger = $c['logger'];
     $client = $c['client'];
+    $identityRotator = $c['identityRotator'];
     $scheduler = $c['scheduler'];
     $docManager = $c['documentManager'];
     $requestFactory = $c['requestFactory'];
-    return new Arachne($logger, $client, $scheduler, $docManager, $requestFactory);
+    return new Arachne($logger, $client, $identityRotator, $scheduler, $docManager, $requestFactory);
 };
 
 $container['scheduler'] = function ($c) {

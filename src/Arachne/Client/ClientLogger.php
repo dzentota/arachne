@@ -2,6 +2,7 @@
 
 namespace Arachne\Client;
 
+use Arachne\Identity\Identity;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerInterface;
@@ -36,5 +37,18 @@ class ClientLogger implements ClientInterface
         $this->logger->debug(sprintf('Got response. Status code: %s, Content-Length: %s',
             $response->getStatusCode(), $response->getHeaderLine('Content-Length')));
         return $response;
+    }
+
+    public function ensureIdentityIsCompatibleWithClient(Identity $identity)
+    {
+        $this->logger->debug('Check if Identity is compatible wit Client');
+        $this->client->ensureIdentityIsCompatibleWithClient($identity);
+    }
+
+    public function prepareConfig(
+        array $requestConfig,
+        Identity $identity
+    ): array {
+        return $this->client->prepareConfig($requestConfig, $identity);
     }
 }

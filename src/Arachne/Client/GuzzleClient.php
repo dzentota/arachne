@@ -47,8 +47,11 @@ class GuzzleClient extends GenericClient
      * @param IdentityRotatorInterface $identityRotator
      * @param GuzzleInterface|null $client
      */
-    public function __construct(EventDispatcherInterface $eventDispatcher, IdentityRotatorInterface $identityRotator, GuzzleInterface $client = null)
-    {
+    public function __construct(
+        EventDispatcherInterface $eventDispatcher,
+        IdentityRotatorInterface $identityRotator,
+        GuzzleInterface $client = null
+    ) {
         parent::__construct($eventDispatcher, $identityRotator);
         $this->httpClient = $client;
     }
@@ -58,11 +61,13 @@ class GuzzleClient extends GenericClient
      */
     public function getHttpClient()
     {
-        return $this->httpClient?? new \GuzzleHttp\Client(
-            ['cookies' => true, 'http_errors' => false,
+        return $this->httpClient ?? new \GuzzleHttp\Client(
+                [
+                    'cookies' => true,
+                    'http_errors' => false,
 //                'verify' => __DIR__ . '/cacert.pem'
-                'verify' => false,
-            ]);
+                    'verify' => false,
+                ]);
     }
 
     /**
@@ -80,28 +85,32 @@ class GuzzleClient extends GenericClient
      * @param $identity
      * @return mixed
      */
-    protected function prepareConfig(array $requestConfig, Identity $identity): array
+    public function prepareConfig(array $requestConfig, ?Identity $identity): array
     {
-        $config = $this->httpClient->getConfig();
-        $config['allow_redirects']['referer'] = $requestConfig['allow_redirects']['referer']??
-            $identity->isSendReferer();
-        $config['headers'] = $requestConfig['headers']??
-            $identity->getDefaultRequestHeaders();
-        $config['headers']['User-Agent'] = $requestConfig['headers']['User-Agent']??
-            $identity->getUserAgent();
-        $proxy = $identity->getGateway()->getGatewayServer();
-        if (!($proxy instanceof Localhost)) {
-            $config['proxy'] = (string) $proxy;
+        $config['allow_redirects']['referer'] = $requestConfig['allow_redirects']['referer'] ??
+            ($identity ? $identity->isSendReferer() : true);
+        $config['headers'] = $requestConfig['headers'] ??
+            ($identity ? $identity->getDefaultRequestHeaders() : []);
+        $config['headers']['User-Agent'] = $requestConfig['headers']['User-Agent'] ??
+            ($identity ? $identity->getUserAgent() : 'Arachne');
+        if ($identity !== null) {
+            $proxy = $identity->getGateway()->getGatewayServer();
+            if (!($proxy instanceof Localhost)) {
+                $config['proxy'] = (string)$proxy;
+            }
         }
-        $config['cookies'] = $requestConfig['cookies']?? ($identity->areCookiesEnabled() ? new CookieJar() : false);
+        $config['cookies'] = $requestConfig['cookies'] ?? ($identity ? $identity->areCookiesEnabled() : true);
         return $config;
     }
 
     /**
      * @param $identity
      */
-    protected function ensureIdentityIsCompatibleWithClient(Identity $identity)
+    public function ensureIdentityIsCompatibleWithClient(?Identity $identity)
     {
+        if ($identity === null) {
+            return;
+        }
         if ($identity->isJSEnabled()) {
             throw new \LogicException('Guzzle client does NOT support JS');
         }
@@ -118,12 +127,19 @@ class GuzzleClient extends GenericClient
         array $config
     ): ResponseInterface {
         try {
+            $defaultConfig = $this->httpClient->getConfig();
+            $requestConfig = array_merge($defaultConfig, $config);
+            //CookieJar can not be converted to string and passed to worker from parent process
+            if (!empty($requestConfig['cookies'])) {
+                $requestConfig['cookies'] = new CookieJar();
+            }
             $httpClient = $this->getHttpClient();
             $response = $httpClient
-                ->send($request, $config);
+                ->send($request, $requestConfig);
         } catch (RequestException $exception) {
             if ($exception->hasResponse()) {
-                $this->eventDispatcher->dispatch(ResponseReceived::name, new ResponseReceived($request, $exception->getResponse()));
+                $this->eventDispatcher->dispatch(ResponseReceived::name,
+                    new ResponseReceived($request, $exception->getResponse()));
             }
             throw new HttpRequestException('Failed to send HTTP Request', 0, $exception);
         }

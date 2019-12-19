@@ -37,7 +37,7 @@ abstract class IdentityRotator implements IdentityRotatorInterface
     }
 
 
-    abstract public function switchIdentityFor(RequestInterface $request);
+    abstract public function switchIdentityFor(RequestInterface $request): Identity;
 
     public function getCurrentIdentity(): Identity
     {

@@ -519,6 +519,7 @@ class Arachne
                 if (isset($exceptionData)) {
                     $exception = new $exceptionData['class']($exceptionData['message']);
                 }
+                //We should somehow differ Fails from Exceptions here
                 if (!isset($exception)) {
                     $this->scheduler->markVisited($resource);
                     if (isset($response) && $response->getStatusCode() === 200) {
@@ -527,7 +528,6 @@ class Arachne
                         $this->handleHttpFail($resource, $response);
                     }
                 } else {
-
                     $this->failedResources[] = $resource;
                     /**
                      * @var $exception \Exception

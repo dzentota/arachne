@@ -184,11 +184,13 @@ $container['createDelayHandler'] = $container->protect(function(LoggerInterface 
 
 $container['httpClient'] = function ($c) {
     $logger = $c['logger'];
-    $stack = HandlerStack::create(new CurlHandler(['handle_factory' => new CurlFactory(0)]));
+    $stack = HandlerStack::create(new \GuzzleHttp\Handler\CurlMultiHandler(
+        ['handle_factory' => new CurlFactory(0)]
+    ));
     $stack->push(Middleware::retry($c['createRetryHandler']($logger), $c['createDelayHandler']($logger)));
 
     $client = new Client([
-        'handler' => $stack,
+        'handler' => \GuzzleHttp\HandlerStack::create(),
         'connect_timeout' => $c['CONNECT_TIMEOUT'],
         'timeout' => $c['TIMEOUT'],
         'http_errors' => false,

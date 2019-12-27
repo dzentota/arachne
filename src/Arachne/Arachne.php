@@ -10,7 +10,6 @@ use Arachne\Identity\Identity;
 use Arachne\Identity\IdentityRotatorInterface;
 use GuzzleHttp\Cookie\CookieJar;
 use GuzzleHttp\Exception\RequestException;
-use GuzzleHttp\Pool;
 use Http\Message\RequestFactory;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerInterface;
@@ -71,8 +70,6 @@ class Arachne
      * @var array
      */
     private $handlers = [];
-
-    private $identities = [];
 
     /**
      * @var EventDispatcherInterface
@@ -472,68 +469,57 @@ class Arachne
      */
     public function processBatch($resources, $requestConfig = [])
     {
-        $this->identities = [];
-        $requests = function () use ($resources, $requestConfig){
+        $requests = (function () use ($resources, $requestConfig){
             foreach ($resources as $resource) {
                 try {
                     $identity = $this->identityRotator->switchIdentityFor($resource->getHttpRequest());
-                    $this->identities[] = $identity;
                     $config = $this->prepareConfig($requestConfig, $identity);
-                    yield function() use ($config, $resource) {
-                        $request = $resource->getHttpRequest();
-                        $this->logger->info('Loading resource from URL ' . $request->getUri());
-                        $this->logger->debug('Request config: ' . (empty($config) ? '<EMPTY>' : var_export(
-                                array_map(function ($param) {
-                                    return ($param instanceof CookieJar)? true : $param;
-                                }, $config), true)));
-                        $this->eventDispatcher->dispatch(RequestPrepared::name, new RequestPrepared($request, $config));
-                        return $this->client->sendAsync($request, $config);
-                    };
+                    $request = $resource->getHttpRequest();
+                    $this->logger->info('Loading resource from URL ' . $request->getUri());
+                    $this->logger->debug('Request config: ' . (empty($config) ? '<EMPTY>' : var_export(
+                            array_map(function ($param) {
+                                return ($param instanceof CookieJar)? true : $param;
+                            }, $config), true)));
+                    $this->eventDispatcher->dispatch(RequestPrepared::name, new RequestPrepared($request, $config));
+                    yield $this->client->sendAsync($request, $config)
+                        ->then(
+                            function (ResponseInterface $response) use ($resource, $identity){
+                                $this->eventDispatcher->dispatch(ResponseReceived::name, new ResponseReceived($resource->getHttpRequest(), $response));
+                                $this->identityRotator->evaluateResult($identity, $response);
+                                $this->scheduler->markVisited($resource);
+                                if ($response->getStatusCode() === 200) {
+                                    try {
+                                        $this->handleHttpSuccess($resource, $response);
+                                    } catch (ParsingResponseException $exception) {
+                                        $this->handleException($resource, $response, $exception);
+                                    }
+                                } else {
+                                    $this->handleHttpFail($resource, $response);
+                                }
+                                $this->handleAnyway($resource, $response);
+                            },
+                            function (RequestException $reason) use ($resource, $identity) {
+                                if (null !== $reason->getResponse()) {
+                                    $this->eventDispatcher->dispatch(ResponseReceived::name,
+                                        new ResponseReceived($resource->getHttpRequest(), $reason->getResponse()));
+                                }
+                                try {
+                                    $this->identityRotator->evaluateResult($identity, null);
+                                } catch (\Exception $exception) {
+                                    $this->handleException($resource, $reason->getResponse(), $exception);
+                                }
+                                $this->handleException($resource, $reason->getResponse(), $reason);
+                                $this->handleAnyway($resource, $reason->getResponse());
+                            }
+                        );
                 } catch (NoGatewaysLeftException $exception) {
                     $this->handleException($resource, null, $exception);
                     $this->shutdown();
                 }
             }
-        };
+        })();
 
-        $pool = new Pool($this->client, $requests(), [
-            'concurrency' => count($resources),
-            'fulfilled' => function (ResponseInterface $response, $index) use ($resources){
-                $resource = $resources[$index];
-                $this->eventDispatcher->dispatch(ResponseReceived::name, new ResponseReceived($resource->getHttpRequest(), $response));
-                $this->identityRotator->evaluateResult($this->identities[$index], $response);
-                $this->scheduler->markVisited($resource);
-                if ($response->getStatusCode() === 200) {
-                    try {
-                        $this->handleHttpSuccess($resource, $response);
-                    } catch (ParsingResponseException $exception) {
-                        $this->handleException($resource, $response, $exception);
-                    }
-                } else {
-                    $this->handleHttpFail($resource, $response);
-                }
-                $this->handleAnyway($resource, $response);
-            },
-            'rejected' => function (RequestException $reason, $index) use ($resources) {
-                $resource = $resources[$index];
-                if (null !== $reason->getResponse()) {
-                    $this->eventDispatcher->dispatch(ResponseReceived::name,
-                        new ResponseReceived($resource->getHttpRequest(), $reason->getResponse()));
-                }
-                try {
-                    $this->identityRotator->evaluateResult($this->identities[$index], null);
-                } catch (\Exception $exception) {
-                    $this->handleException($resource, $reason->getResponse(), $exception);
-                }
-                $this->handleException($resource, $reason->getResponse(), $reason);
-                $this->handleAnyway($resource, $reason->getResponse());
-            },
-        ]);
-
-        // Initiate the transfers and create a promise
-        $promise = $pool->promise();
-        // Force the pool of requests to complete.
-        $promise->wait();
+        \GuzzleHttp\Promise\settle($requests)->wait();
     }
 
     /**

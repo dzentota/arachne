@@ -59,10 +59,9 @@ abstract class IdentityRotator implements IdentityRotatorInterface
     /**
      * @param ResponseInterface $response
      */
-    public function evaluateResult(?ResponseInterface $response)
+    public function evaluateResult(Identity $identity, ?ResponseInterface $response)
     {
-        $currentIdentity = $this->getCurrentIdentity();
-        $gateway = $currentIdentity->getGateway();
+        $gateway = $identity->getGateway();
         $gateway->requested(); // increase request count
         if ($response) {
             if ($this->evaluate($gateway, $response)) {

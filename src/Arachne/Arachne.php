@@ -2,20 +2,23 @@
 
 namespace Arachne;
 
-use Arachne\Exceptions\GatewayException;
+use Arachne\Client\Events\RequestPrepared;
+use Arachne\Client\Events\ResponseReceived;
 use Arachne\Exceptions\NoGatewaysLeftException;
+use Arachne\Gateway\Localhost;
 use Arachne\Identity\Identity;
 use Arachne\Identity\IdentityRotatorInterface;
+use GuzzleHttp\Cookie\CookieJar;
+use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Pool;
 use Http\Message\RequestFactory;
-use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerInterface;
-use QXS\WorkerPool\WorkerPool;
 use Respect\Validation\Exceptions\NestedValidationException;
-use Arachne\Client\ClientInterface;
-use Arachne\Exceptions\HttpRequestException;
+use GuzzleHttp\ClientInterface;
 use Arachne\Exceptions\ParsingResponseException;
 use Arachne\Frontier\FrontierInterface;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 /**
  * Class Arachne
@@ -53,14 +56,6 @@ class Arachne
     private $logger;
 
     private $requestFactory;
-    /**
-     * @var RequestInterface
-     */
-    private $lastRequest;
-    /**
-     * @var ResponseInterface
-     */
-    private $lastResponse;
 
     /**
      * @var
@@ -77,13 +72,12 @@ class Arachne
      */
     private $handlers = [];
 
-    private $parentPid = 0;
+    private $identities = [];
 
     /**
-     * @var WorkerPool
+     * @var EventDispatcherInterface
      */
-    private $workerPool;
-
+    private $eventDispatcher;
     /**
      * Arachne constructor.
      * @param LoggerInterface $logger
@@ -99,19 +93,18 @@ class Arachne
         IdentityRotatorInterface $identityRotator,
         Scheduler $scheduler,
         Document\Manager $docManager,
-        RequestFactory $requestFactory
+        RequestFactory $requestFactory,
+        EventDispatcherInterface $eventDispatcher
     ) {
-        $this->parentPid = getmypid();
         $this->logger = $logger;
         $this->client = $client;
         $this->identityRotator = $identityRotator;
         $this->scheduler = $scheduler;
         $this->docManager = $docManager;
         $this->requestFactory = $requestFactory;
-        $this->logger->debug('Started process with PID: ' . $this->parentPid);
+        $this->eventDispatcher = $eventDispatcher;
         register_shutdown_function(function () use ($scheduler) {
-            if ($this->parentPid === getmypid()) {
-                $this->logger->debug('Shutting down parent process');
+                $this->logger->debug('Shutting down process');
                 if ($this->reschedulePreviouslyFailedResources && count($this->failedResources)) {
                     $this->logger->debug('Rescheduling failed resources for the next run');
                     $failedResources = $this->failedResources;
@@ -120,9 +113,6 @@ class Arachne
                         $this->scheduler->schedule($failedResource);
                     }
                 }
-            } else {
-                $this->logger->debug('Shutting down worker process');
-            }
         });
     }
 
@@ -147,49 +137,11 @@ class Arachne
 
     /**
      * @param \Arachne\HttpResource|HttpResource $resource
+     * @param array $requestConfig
      */
-    public function processSingleItem(HttpResource $resource)
+    public function processSingleItem(HttpResource $resource, $requestConfig = [])
     {
-        $this->lastRequest = $request = $resource->getHttpRequest();
-        $response = null;
-        try {
-            $this->lastResponse = $response = $this->client->sendRequest($request);
-            $this->scheduler->markVisited($resource);
-            $this->handleResponse($resource, $response);
-        } catch (HttpRequestException $exception) {
-            $this->logger->error('Got Exception during sending the Request ' . $resource->getUrl());
-            $this->logger->error('Exception message: ' . ($exception->getPrevious() ?
-                    $exception->getPrevious()->getMessage() : $exception->getMessage()));
-            $this->handleHttpFail($resource, $response, $exception);
-        } catch (ParsingResponseException $exception) {
-            $this->logger->critical('Got Exception during parsing the Response from ' . $resource->getUrl());
-            $this->logger->critical('Exception message: ' . $exception->getMessage());
-            $this->handleException($resource, $response, $exception);
-        } catch (NoGatewaysLeftException $exception) {
-            $this->handleException($resource, $response, $exception);
-            $this->failedResources[] = $resource;
-            //if script is still running due to shutdownOnException === false
-            $this->shutdown();
-        } catch (GatewayException $exception) {
-            $this->handleException($resource, $response, $exception);
-            $this->failedResources[] = $resource;
-        } catch (\Exception $exception) {
-            $this->logger->critical('Got Exception during sending the Request ' . $resource->getUrl());
-            $this->logger->critical('Exception message: ' . $exception->getMessage());
-            $this->failedResources[] = $resource;
-            $this->handleException($resource, $response, $exception);
-        } finally {
-            if ($handler = $this->getAlwaysHandler($resource->getType())) {
-                try {
-                    $handler($response, $resource);
-                    $this->logger->debug(sprintf('Handler of the resource %s has been called', $resource->getUrl()));
-                } catch (\Exception $exception) {
-                    $this->logger->critical(sprintf('Failed to handle resource %s. Reason: %s', $resource->getUrl(),
-                        $exception->getMessage()));
-                    $this->handleException($resource, $response, $exception);
-                }
-            }
-        }
+        $this->processBatch([$resource], $requestConfig);
     }
 
     protected function handleException(
@@ -324,7 +276,7 @@ class Arachne
                 $batch[] = $resource;
                 $checkIfFrontierEmpty = true;
             }
-            $batch && $this->processBatch(...$batch);
+            $batch && $this->processBatch($batch);
         } while ($checkIfFrontierEmpty);
         $this->logger->debug('No more Items to process');
     }
@@ -458,6 +410,20 @@ class Arachne
         }
     }
 
+    protected function handleAnyway(HttpResource $resource, ?ResponseInterface $response = null)
+    {
+        if ($handler = $this->getAlwaysHandler($resource->getType())) {
+            try {
+                $handler($response, $resource);
+                $this->logger->debug(sprintf('Handler of the resource %s has been called', $resource->getUrl()));
+            } catch (\Exception $exception) {
+                $this->logger->critical(sprintf('Failed to handle resource %s. Reason: %s', $resource->getUrl(),
+                    $exception->getMessage()));
+                $this->handleException($resource, $response, $exception);
+            }
+        }
+    }
+
     /**
      * @param HttpResource $resource
      * @param ResponseInterface $response
@@ -478,98 +444,96 @@ class Arachne
         die();
     }
 
-    /**
-     * @param HttpResource[] $resources
-     * @throws \QXS\WorkerPool\WorkerPoolException
-     */
-    protected function processBatch(HttpResource ... $resources)
+    public function prepareConfig(array $requestConfig, ?Identity $identity): array
     {
-        $wp = $this->getWorkerPool();
-        foreach ($resources as $resource) {
-            /**
-             * Identity rotator can not be used directly in worker because all workers share
-             * parent's memory and will have the same list of proxies and other settings in such case
-             */
-            $identity = $this->identityRotator->switchIdentityFor($resource->getHttpRequest());
-            $this->client->ensureIdentityIsCompatibleWithClient($identity);
-            /**
-             * Prepare config because Identity can not be serialized, so can not be passed to worker
-             */
-            $config = $this->client->prepareConfig([], $identity);
-            $wp->run(['resource' => $resource, 'config' => $config]);
-        }
-        $wp->waitForAllWorkers(); // wait for all workers
-        foreach ($wp as $result) {
-
-            try {
-                if (empty($result['data'])) {
-                    $this->logger->error('Got empty result from Worker');
-                    continue;
-                }
-                $response = null;
-                /**
-                 * @var HttpResource $resource
-                 * @var string $serializedResponse
-                 * @var \Exception $exception
-                 */
-                extract($result['data'], EXTR_OVERWRITE);
-                if (isset($serializedResponse)) {
-                    $response = \Zend\Diactoros\Response\Serializer::fromString($serializedResponse);
-                }
-                if (isset($exceptionData)) {
-                    $exception = new $exceptionData['class']($exceptionData['message']);
-                }
-                //We should somehow differ Fails from Exceptions here
-                if (!isset($exception)) {
-                    $this->scheduler->markVisited($resource);
-                    if (isset($response) && $response->getStatusCode() === 200) {
-                        $this->handleHttpSuccess($resource, $response);
-                    } else {
-                        $this->handleHttpFail($resource, $response);
-                    }
-                } else {
-                    $this->failedResources[] = $resource;
-                    /**
-                     * @var $exception \Exception
-                     */
-                    switch (get_class($exception)) {
-                        case HttpRequestException::class:
-                            $this->handleHttpFail($resource, $response, $exception);
-                            break;
-                        case NoGatewaysLeftException::class:
-                            $this->handleException($resource, $response, $exception);
-                            //if script is still running due to shutdownOnException === false
-                            $this->shutdown();
-                            break;
-                        case GatewayException::class:
-                            $this->handleException($resource, $response, $exception);
-                            break;
-                    }
-
-                }
-
-            } catch (ParsingResponseException $exception) {
-                $this->logger->critical('Got Exception during parsing the Response from ' . $resource->getUrl());
-                $this->logger->critical('Exception message: ' . $exception->getMessage());
-                $this->handleException($resource, $response, $exception);
-            } catch (\Exception $exception) {
-                $this->logger->critical('Got Exception during sending the Request ' . $resource->getUrl());
-                $this->logger->critical('Exception message: ' . $exception->getMessage());
-                $this->failedResources[] = $resource;
-                $this->handleException($resource, $response, $exception);
-            } finally {
-                if ($handler = $this->getAlwaysHandler($resource->getType())) {
-                    try {
-                        $handler($response, $resource);
-                        $this->logger->debug(sprintf('Handler of the resource %s has been called', $resource->getUrl()));
-                    } catch (\Exception $exception) {
-                        $this->logger->critical(sprintf('Failed to handle resource %s. Reason: %s', $resource->getUrl(),
-                            $exception->getMessage()));
-                        $this->handleException($resource, $response, $exception);
-                    }
-                }
+        $config['allow_redirects']['referer'] = $requestConfig['allow_redirects']['referer'] ??
+            ($identity ? $identity->isSendReferer() : true);
+        $config['headers'] = $requestConfig['headers'] ??
+            ($identity ? $identity->getDefaultRequestHeaders() : []);
+        $config['headers']['User-Agent'] = $requestConfig['headers']['User-Agent'] ??
+            ($identity ? $identity->getUserAgent() : 'Arachne');
+        if ($identity !== null) {
+            $proxy = $identity->getGateway()->getGatewayServer();
+            if (!($proxy instanceof Localhost)) {
+                $config['proxy'] = (string)$proxy;
             }
         }
+        if (isset($requestConfig['cookies'])) {
+            $config['cookies'] = $requestConfig['cookies'];
+        } else {
+            $config['cookies'] = $identity !== null && $identity->areCookiesEnabled()? new CookieJar() : false;
+        }
+        return $config;
+    }
+
+    /**
+     * @param HttpResource[] $resources
+     * @param array $requestConfig
+     */
+    public function processBatch($resources, $requestConfig = [])
+    {
+        $this->identities = [];
+        $requests = function () use ($resources, $requestConfig){
+            foreach ($resources as $resource) {
+                try {
+                    $identity = $this->identityRotator->switchIdentityFor($resource->getHttpRequest());
+                    $this->identities[] = $identity;
+                    $config = $this->prepareConfig($requestConfig, $identity);
+                    yield function() use ($config, $resource) {
+                        $request = $resource->getHttpRequest();
+                        $this->logger->info('Loading resource from URL ' . $request->getUri());
+                        $this->logger->debug('Request config: ' . (empty($config) ? '<EMPTY>' : var_export(
+                                array_map(function ($param) {
+                                    return ($param instanceof CookieJar)? true : $param;
+                                }, $config), true)));
+                        $this->eventDispatcher->dispatch(RequestPrepared::name, new RequestPrepared($request, $config));
+                        return $this->client->sendAsync($request, $config);
+                    };
+                } catch (NoGatewaysLeftException $exception) {
+                    $this->handleException($resource, null, $exception);
+                    $this->shutdown();
+                }
+            }
+        };
+
+        $pool = new Pool($this->client, $requests(), [
+            'concurrency' => count($resources),
+            'fulfilled' => function (ResponseInterface $response, $index) use ($resources){
+                $resource = $resources[$index];
+                $this->eventDispatcher->dispatch(ResponseReceived::name, new ResponseReceived($resource->getHttpRequest(), $response));
+                $this->identityRotator->evaluateResult($this->identities[$index], $response);
+                $this->scheduler->markVisited($resource);
+                if ($response->getStatusCode() === 200) {
+                    try {
+                        $this->handleHttpSuccess($resource, $response);
+                    } catch (ParsingResponseException $exception) {
+                        $this->handleException($resource, $response, $exception);
+                    }
+                } else {
+                    $this->handleHttpFail($resource, $response);
+                }
+                $this->handleAnyway($resource, $response);
+            },
+            'rejected' => function (RequestException $reason, $index) use ($resources) {
+                $resource = $resources[$index];
+                if (null !== $reason->getResponse()) {
+                    $this->eventDispatcher->dispatch(ResponseReceived::name,
+                        new ResponseReceived($resource->getHttpRequest(), $reason->getResponse()));
+                }
+                try {
+                    $this->identityRotator->evaluateResult($this->identities[$index], null);
+                } catch (\Exception $exception) {
+                    $this->handleException($resource, $reason->getResponse(), $exception);
+                }
+                $this->handleException($resource, $reason->getResponse(), $reason);
+                $this->handleAnyway($resource, $reason->getResponse());
+            },
+        ]);
+
+        // Initiate the transfers and create a promise
+        $promise = $pool->promise();
+        // Force the pool of requests to complete.
+        $promise->wait();
     }
 
     /**
@@ -587,58 +551,6 @@ class Arachne
             $this->docManager->getBlobsStorage()->clear();
         }
         return $this;
-    }
-
-    /**
-     * @return WorkerPool
-     * @throws \QXS\WorkerPool\WorkerPoolException
-     */
-    protected function getWorkerPool(): WorkerPool
-    {
-        /**
-         * Skip creation of new Workers to prevent error:
-         * socket_create_pair(): unable to create socket pair [24]: Too many open files
-         */
-        if (!isset($this->workerPool)) {
-            $this->workerPool = new \QXS\WorkerPool\WorkerPool();
-            $this->workerPool->setWorkerPoolSize($this->getConcurrency())
-                ->create(new \QXS\WorkerPool\ClosureWorker(
-                    /**
-                     * @param mixed $input the input from the WorkerPool::run() Method
-                     * @param \QXS\WorkerPool\Semaphore $semaphore the semaphore to synchronize calls accross all workers
-                     * @param \ArrayObject $storage a persistent storage for the current child process
-                     */
-                        function ($input, $semaphore, $storage) {
-                            /**
-                             * @var HttpResource $resource
-                             */
-                            $resource = $input['resource'];
-                            /**
-                             * @var Identity $identity
-                             */
-                            $requestConfig = $input['config'];
-                            $response = null;
-                            $request = $resource->getHttpRequest();
-                            try {
-                                $response = $this->client->sendRequest($request, $requestConfig);
-                                $this->identityRotator->evaluateResult($response);
-                                /**
-                                 * Serialize Response object to forward stream contents to parent process
-                                 */
-                                return ['resource' => $resource, 'serializedResponse' => \Zend\Diactoros\Response\Serializer::toString($response)];
-                            } catch (\Exception $exception) {
-                                $this->identityRotator->evaluateResult(null);
-                                $this->logger->error('Got Exception: ' . $exception->getMessage(). ', during sending the Request ' . $resource->getUrl());
-                                if ($exception->getPrevious()) {
-                                    $this->logger->error('Previous exception message: ' . $exception->getPrevious()->getMessage());
-                                }
-                                return ['resource' => $resource, 'serializedResponse' => $response? \Zend\Diactoros\Response\Serializer::toString($response) : null, 'exceptionData' => ['class' => get_class($exception), 'message' => $exception->getMessage()]];
-                            }
-                        }
-                    )
-                );
-        }
-        return $this->workerPool;
     }
 
 }

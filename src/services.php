@@ -75,15 +75,6 @@ $container['identities'] = function ($c) {
     return new IdentitiesCollection($identity);
 };
 
-$container['client'] = function ($c) {
-    $logger = $c['logger'];
-    $httpClient = $c['createHttpClient'];
-    $eventDispatcher = $c['eventDispatcher'];
-    $client = new GuzzleClient($eventDispatcher,
-        $c['identityRotator'], $httpClient);
-    return new ClientLogger($client, $logger);
-};
-
 $container['identityRotator'] = function ($c) {
     return new RoundRobinIdentityRotator($c['identities']);
 };
@@ -119,12 +110,13 @@ $container['filesystem'] = function ($c) {
 
 $container['scraper'] = function ($c) {
     $logger = $c['logger'];
-    $client = $c['client'];
+    $client = $c['httpClient'];
     $identityRotator = $c['identityRotator'];
     $scheduler = $c['scheduler'];
     $docManager = $c['documentManager'];
     $requestFactory = $c['requestFactory'];
-    return new Arachne($logger, $client, $identityRotator, $scheduler, $docManager, $requestFactory);
+    $eventDispatcher = $c['eventDispatcher'];
+    return new Arachne($logger, $client, $identityRotator, $scheduler, $docManager, $requestFactory, $eventDispatcher);
 };
 
 $container['scheduler'] = function ($c) {
@@ -190,7 +182,7 @@ $container['createDelayHandler'] = $container->protect(function(LoggerInterface 
     };
 });
 
-$container['createHttpClient'] = function ($c) {
+$container['httpClient'] = function ($c) {
     $logger = $c['logger'];
     $stack = HandlerStack::create(new CurlHandler(['handle_factory' => new CurlFactory(0)]));
     $stack->push(Middleware::retry($c['createRetryHandler']($logger), $c['createDelayHandler']($logger)));

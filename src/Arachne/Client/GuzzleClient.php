@@ -4,7 +4,7 @@ namespace Arachne\Client;
 
 use Arachne\Client\Events\ResponseReceived;
 use Arachne\Gateway\Localhost;
-use Arachne\Identity\IdentityRotatorInterface;
+use GuzzleHttp\Client;
 use GuzzleHttp\ClientInterface as GuzzleInterface;
 use GuzzleHttp\Cookie\CookieJar;
 use GuzzleHttp\Exception\RequestException;
@@ -44,24 +44,22 @@ class GuzzleClient extends GenericClient
     /**
      * GuzzleClient constructor.
      * @param EventDispatcherInterface $eventDispatcher
-     * @param IdentityRotatorInterface $identityRotator
      * @param GuzzleInterface|null $client
      */
     public function __construct(
         EventDispatcherInterface $eventDispatcher,
-        IdentityRotatorInterface $identityRotator,
         GuzzleInterface $client = null
     ) {
-        parent::__construct($eventDispatcher, $identityRotator);
+        parent::__construct($eventDispatcher);
         $this->httpClient = $client;
     }
 
     /**
-     * @return \GuzzleHttp\Client|GuzzleInterface|null
+     * @return Client|GuzzleInterface|null
      */
     public function getHttpClient()
     {
-        return $this->httpClient ?? new \GuzzleHttp\Client(
+        return $this->httpClient ?? new Client(
                 [
                     'cookies' => true,
                     'http_errors' => false,
@@ -138,8 +136,9 @@ class GuzzleClient extends GenericClient
                 ->send($request, $requestConfig);
         } catch (RequestException $exception) {
             if ($exception->hasResponse()) {
-                $this->eventDispatcher->dispatch(ResponseReceived::name,
-                    new ResponseReceived($request, $exception->getResponse()));
+                $this->eventDispatcher->dispatch(
+                    new ResponseReceived($request, $exception->getResponse())
+                );
             }
             throw new HttpRequestException('Failed to send HTTP Request', 0, $exception);
         }

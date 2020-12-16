@@ -10,7 +10,7 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Handler\CurlFactory;
-use GuzzleHttp\Handler\CurlHandler;
+use GuzzleHttp\Handler\CurlMultiHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Middleware;
 use Http\Message\MessageFactory\DiactorosMessageFactory;
@@ -20,8 +20,6 @@ use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerInterface;
 use Arachne\BlobsStorage\Gaufrette;
-use Arachne\Client\ClientLogger;
-use Arachne\Client\GuzzleClient;
 use Arachne\Document\DocumentLogger;
 use Arachne\Document\InMemory as InMemoryStorage;
 use Arachne\Document\Manager;
@@ -184,13 +182,13 @@ $container['createDelayHandler'] = $container->protect(function(LoggerInterface 
 
 $container['httpClient'] = function ($c) {
     $logger = $c['logger'];
-    $stack = HandlerStack::create(new \GuzzleHttp\Handler\CurlMultiHandler(
+    $stack = HandlerStack::create(new CurlMultiHandler(
         ['handle_factory' => new CurlFactory(0)]
     ));
     $stack->push(Middleware::retry($c['createRetryHandler']($logger), $c['createDelayHandler']($logger)));
 
     $client = new Client([
-        'handler' => \GuzzleHttp\HandlerStack::create(),
+        'handler' => HandlerStack::create(),
         'connect_timeout' => $c['CONNECT_TIMEOUT'],
         'timeout' => $c['TIMEOUT'],
         'http_errors' => false,

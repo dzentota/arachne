@@ -2,13 +2,16 @@
 require 'vendor/autoload.php';
 
 use Arachne\Crawler\DomCrawler;
+use Arachne\HttpResource;
+use Arachne\Item;
+use Arachne\Mode;
 use Arachne\ResultSet;
 use Psr\Http\Message\ResponseInterface;
 use Respect\Validation\Validator as v;
 
 require 'src/services.php';
 
-class NewsIntro extends \Arachne\Item
+class NewsIntro extends Item
 {
     protected $title;
     protected $description;
@@ -22,7 +25,7 @@ class NewsIntro extends \Arachne\Item
     }
 }
 
-class NewsContent extends \Arachne\Item
+class NewsContent extends Item
 {
     protected $content;
     protected $type = 'news';
@@ -34,7 +37,7 @@ class NewsContent extends \Arachne\Item
 }
 
 $container['scraper']
-    ->prepareEnv(\Arachne\Mode::CLEAR)
+    ->prepareEnv(Mode::CLEAR)
     ->addHandlers(
         [
             'success:rss' => function (ResponseInterface $response, ResultSet $resultSet) use ($container) {
@@ -75,6 +78,6 @@ $container['scraper']
                 $resultSet->markAsBlob();
             }
         ]
-    )->scrape(\Arachne\HttpResource::fromUrl('https://www.onliner.by/feed',  'rss'))
+    )->scrape(HttpResource::fromUrl('https://www.onliner.by/feed',  'rss'))
     ->dumpDocuments()
 ;

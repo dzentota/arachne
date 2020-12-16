@@ -20,8 +20,7 @@ class GuzzleClientTest extends \PHPUnit_Framework_TestCase
     public function testDefaultHttpClient()
     {
         $dispatcher = new EventDispatcher();
-        $identityRotator = new RoundRobinIdentityRotator(new IdentitiesCollection());
-        $guzzleDefaultClient = new GuzzleClient($dispatcher, $identityRotator);
+        $guzzleDefaultClient = new GuzzleClient($dispatcher);
         $httpClient = $guzzleDefaultClient->getHttpClient();
         $this->assertInstanceOf(ClientInterface::class, $httpClient);
     }
@@ -129,11 +128,10 @@ class GuzzleClientTest extends \PHPUnit_Framework_TestCase
     {
         $identity = new Identity(new Gateway(new EventDispatcher(), GatewayServer::localhost()), 'Arachne', [], true,
             true);
-        $identityRotator = new RoundRobinIdentityRotator(new IdentitiesCollection($identity));
         $dispatcher = new EventDispatcher();
         $httpClientMock = $this->createMock(\GuzzleHttp\Client::class);
 
-        $guzzleClient = new GuzzleClient($dispatcher, $identityRotator, $httpClientMock);
+        $guzzleClient = new GuzzleClient($dispatcher, $httpClientMock);
         $guzzleClient->sendRequest(new Request());
     }
 

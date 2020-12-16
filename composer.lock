@@ -1,10 +1,10 @@
 {
     "_readme": [
         "This file locks the dependencies of your project to a known state",
-        "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
+        "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "451a3bb08e214794fb366b4deee8434b",
+    "content-hash": "f0dbb6da320998c1c178dd8289e4a4ec",
     "packages": [
         {
             "name": "bramus/ansi-php",
@@ -418,25 +418,25 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/jmikola/WildcardEventDispatcher.git",
-                "reference": "cc3257181cfc25a025b049348c5f9053e83ec627"
+                "reference": "4f2e452db396a830789269e89e8a84eaf5829900"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/jmikola/WildcardEventDispatcher/zipball/cc3257181cfc25a025b049348c5f9053e83ec627",
-                "reference": "cc3257181cfc25a025b049348c5f9053e83ec627",
+                "url": "https://api.github.com/repos/jmikola/WildcardEventDispatcher/zipball/4f2e452db396a830789269e89e8a84eaf5829900",
+                "reference": "4f2e452db396a830789269e89e8a84eaf5829900",
                 "shasum": ""
             },
             "require": {
-                "php": ">=5.3.2",
-                "symfony/event-dispatcher": "^2.3 || ^3.0 || ^4.0"
+                "php": "^7.2",
+                "symfony/event-dispatcher": "^4.3 || ^5.0"
             },
             "require-dev": {
-                "phpunit/phpunit": "^4.8.36 || ^6.4"
+                "phpunit/phpunit": "^8.0"
             },
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "1.1.x-dev"
+                    "dev-master": "2.0.x-dev"
                 }
             },
             "autoload": {
@@ -462,7 +462,7 @@
                 "event",
                 "event dispatcher"
             ],
-            "time": "2019-02-12T16:00:06+00:00"
+            "time": "2020-06-02T14:17:52+00:00"
         },
         {
             "name": "jwage/purl",
@@ -1681,6 +1681,7 @@
                 "psr",
                 "psr-7"
             ],
+            "abandoned": "laminas/laminas-diactoros",
             "time": "2019-08-06T17:55:50+00:00"
         }
     ],

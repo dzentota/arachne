@@ -28,9 +28,9 @@ abstract class GenericClient implements ClientInterface
 
     public function sendRequest(RequestInterface $request, array $requestConfig = []): ResponseInterface
     {
-        $this->eventDispatcher->dispatch(RequestPrepared::name, new RequestPrepared($request, $requestConfig));
+        $this->eventDispatcher->dispatch(new RequestPrepared($request, $requestConfig));
         $response = $this->sendHTTPRequest($request, $requestConfig);
-        $this->eventDispatcher->dispatch(ResponseReceived::name, new ResponseReceived($request, $response));
+        $this->eventDispatcher->dispatch(new ResponseReceived($request, $response));
         return $response;
     }
 

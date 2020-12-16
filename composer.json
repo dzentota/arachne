@@ -24,7 +24,7 @@
         "mongodb/mongodb": "^1.1",
         "campo/random-user-agent": "^1.2",
         "symfony/event-dispatcher": "^4.0",
-        "jmikola/wildcard-event-dispatcher": "~1.0",
+        "jmikola/wildcard-event-dispatcher": "^2.0",
         "dzentota/chrome-dev-tools": "dev-master",
         "jwage/purl": "^1.0@dev",
         "pimple/pimple": "~3.0",

@@ -121,7 +121,7 @@ class Gateway implements GatewayInterface
     {
         $this->currentTotalFails++;
         $this->currentConsecutiveFails++;
-        $this->eventDispatcher->dispatch(GatewayFailed::name, new GatewayFailed($this->gatewayServer));
+        $this->eventDispatcher->dispatch(new GatewayFailed($this->gatewayServer));
     }
 
     /**
@@ -131,7 +131,7 @@ class Gateway implements GatewayInterface
     public function requested()
     {
         $this->totalRequests++;
-        $this->eventDispatcher->dispatch(GatewayRequested::name, new GatewayRequested($this->gatewayServer));
+        $this->eventDispatcher->dispatch(new GatewayRequested($this->gatewayServer));
     }
 
     /**
@@ -141,7 +141,7 @@ class Gateway implements GatewayInterface
     public function succeeded()
     {
         $this->currentConsecutiveFails = 0;
-        $this->eventDispatcher->dispatch(GatewaySucceeded::name, new GatewaySucceeded($this->gatewayServer));
+        $this->eventDispatcher->dispatch(new GatewaySucceeded($this->gatewayServer));
     }
 
     /**
@@ -149,7 +149,7 @@ class Gateway implements GatewayInterface
     public function block()
     {
         $this->blocked = true;
-        $this->eventDispatcher->dispatch(GatewayBlocked::name, new GatewayBlocked($this->gatewayServer));
+        $this->eventDispatcher->dispatch(new GatewayBlocked($this->gatewayServer));
         throw new GatewayException(sprintf('Gateway %s blocked', $this->gatewayServer));
     }
 
@@ -158,7 +158,7 @@ class Gateway implements GatewayInterface
     public function unblock()
     {
         $this->blocked = false;
-        $this->eventDispatcher->dispatch(GatewayUnblocked::name, new GatewayUnblocked($this->gatewayServer));
+        $this->eventDispatcher->dispatch(new GatewayUnblocked($this->gatewayServer));
     }
 
     /**

@@ -18,6 +18,7 @@ use GuzzleHttp\ClientInterface;
 use Arachne\Exceptions\ParsingResponseException;
 use Arachne\Frontier\FrontierInterface;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use function GuzzleHttp\Promise\settle;
 
 /**
  * Class Arachne
@@ -480,11 +481,11 @@ class Arachne
                             array_map(function ($param) {
                                 return ($param instanceof CookieJar)? true : $param;
                             }, $config), true)));
-                    $this->eventDispatcher->dispatch(RequestPrepared::name, new RequestPrepared($request, $config));
+                    $this->eventDispatcher->dispatch(new RequestPrepared($request, $config));
                     yield $this->client->sendAsync($request, $config)
                         ->then(
                             function (ResponseInterface $response) use ($resource, $identity){
-                                $this->eventDispatcher->dispatch(ResponseReceived::name, new ResponseReceived($resource->getHttpRequest(), $response));
+                                $this->eventDispatcher->dispatch(new ResponseReceived($resource->getHttpRequest(), $response));
                                 $this->identityRotator->evaluateResult($identity, $response);
                                 $this->scheduler->markVisited($resource);
                                 if ($response->getStatusCode() === 200) {
@@ -500,7 +501,7 @@ class Arachne
                             },
                             function (RequestException $reason) use ($resource, $identity) {
                                 if (null !== $reason->getResponse()) {
-                                    $this->eventDispatcher->dispatch(ResponseReceived::name,
+                                    $this->eventDispatcher->dispatch(
                                         new ResponseReceived($resource->getHttpRequest(), $reason->getResponse()));
                                 }
                                 try {
@@ -519,7 +520,7 @@ class Arachne
             }
         })();
 
-        \GuzzleHttp\Promise\settle($requests)->wait();
+        settle($requests)->wait();
     }
 
     /**

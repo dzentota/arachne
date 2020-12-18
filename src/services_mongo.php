@@ -7,6 +7,7 @@ use Arachne\Document\Mongo as MongoStorage;
 use Arachne\Filter\FilterLogger;
 use Arachne\Filter\Mongo as MongoFilter;
 use Arachne\Frontier\Mongo as MongoFrontier;
+use MongoDB\Client;
 
 require __DIR__ . '/services.php';
 
@@ -31,6 +32,5 @@ $container['filter'] = function ($c) {
 };
 
 $container['mongoDbClient'] = function ($c) {
-    $client = new \MongoDB\Client('mongodb://localhost:27017');
-    return $client;
+    return new Client('mongodb://root:root@mongo:27017');
 };

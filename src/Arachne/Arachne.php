@@ -156,6 +156,8 @@ class Arachne
                 $this->logger->error(sprintf('Failed to handle Exception. Resource %s. Reason: %s', $resource->getUrl(),
                     $e->getMessage()));
             }
+        } elseif ($exception !== null) {
+            $this->logger->error(sprintf('Exception: %s. Resource %s', $exception->getMessage(), $resource->getUrl()));
         }
         $this->shutdownOnException && $this->shutdown();
     }

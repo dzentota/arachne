@@ -1,5 +1,6 @@
 <?php
 
+use Arachne\Client\Guzzle;
 use Arachne\Gateway\Gateway;
 use Arachne\Gateway\GatewayProfile;
 use Arachne\Gateway\GatewayServer;
@@ -32,7 +33,6 @@ use Arachne\Frontier\InMemory as InMemoryFrontier;
 use Arachne\Identity\IdentitiesCollection;
 use Arachne\Identity\Identity;
 use Arachne\Scheduler;
-use Arachne\Arachne;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Pimple\Container;
 use \Bramus\Monolog\Formatter\ColoredLineFormatter;
@@ -114,7 +114,7 @@ $container['scraper'] = function ($c) {
     $docManager = $c['documentManager'];
     $requestFactory = $c['requestFactory'];
     $eventDispatcher = $c['eventDispatcher'];
-    return new Arachne($logger, $client, $identityRotator, $scheduler, $docManager, $requestFactory, $eventDispatcher);
+    return new Guzzle($logger, $client, $identityRotator, $scheduler, $docManager, $requestFactory, $eventDispatcher);
 };
 
 $container['scheduler'] = function ($c) {

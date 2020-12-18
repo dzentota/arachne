@@ -3,7 +3,6 @@
 namespace Arachne\Client\Events;
 
 use Psr\Http\Message\RequestInterface;
-use Arachne\Proxy\SwitchableIdentityProxyInterface;
 use Arachne\Event\Event;
 
 class RequestPrepared extends Event

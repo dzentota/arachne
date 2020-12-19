@@ -43,7 +43,7 @@ $dispatcher->addListener(GatewayFailed::name, function (GatewayFailed $event) {
     echo "Gateway failed: " . $event->getGatewayServer(), PHP_EOL;
 });
 /**
- * @var Arachne\Arachne $scraper
+ * @var Arachne\Engine $scraper
  */
 $scraper = $container['scraper'];
 $scraper

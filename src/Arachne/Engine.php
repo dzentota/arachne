@@ -2,29 +2,21 @@
 
 namespace Arachne;
 
-use Arachne\Client\Events\RequestPrepared;
-use Arachne\Client\Events\ResponseReceived;
-use Arachne\Exceptions\NoGatewaysLeftException;
-use Arachne\Gateway\Localhost;
-use Arachne\Identity\Identity;
+use Arachne\Client\ClientInterface;
 use Arachne\Identity\IdentityRotatorInterface;
-use GuzzleHttp\Cookie\CookieJar;
-use GuzzleHttp\Exception\RequestException;
 use Http\Message\RequestFactory;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerInterface;
 use Respect\Validation\Exceptions\NestedValidationException;
-use GuzzleHttp\ClientInterface;
 use Arachne\Exceptions\ParsingResponseException;
 use Arachne\Frontier\FrontierInterface;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
-use function GuzzleHttp\Promise\settle;
 
 /**
  * Class Arachne
  * @package Arachne
  */
-abstract class Arachne
+abstract class Engine
 {
     public $reschedulePreviouslyFailedResources = true;
     public $shutdownOnException = false;
@@ -101,16 +93,21 @@ abstract class Arachne
         $this->docManager = $docManager;
         $this->requestFactory = $requestFactory;
         $this->eventDispatcher = $eventDispatcher;
-        register_shutdown_function(function () use ($scheduler) {
-                $this->logger->debug('Shutting down process');
-                if ($this->reschedulePreviouslyFailedResources && count($this->failedResources)) {
-                    $this->logger->debug('Rescheduling failed resources for the next run');
-                    $failedResources = $this->failedResources;
-                    $this->failedResources = [];
-                    foreach ($failedResources as $failedResource) {
-                        $this->scheduler->schedule($failedResource);
-                    }
+        $this->onShutdown();
+    }
+
+    protected function onShutdown()
+    {
+        register_shutdown_function(function () {
+            $this->logger->debug('Shutting down process');
+            if ($this->reschedulePreviouslyFailedResources && count($this->failedResources)) {
+                $this->logger->debug('Rescheduling failed resources for the next run');
+                $failedResources = $this->failedResources;
+                $this->failedResources = [];
+                foreach ($failedResources as $failedResource) {
+                    $this->scheduler->schedule($failedResource);
                 }
+            }
         });
     }
 
@@ -211,7 +208,7 @@ abstract class Arachne
 
     /**
      * @param HttpResource ...$resources
-     * @return Arachne
+     * @return Engine
      */
     public function scrape(HttpResource ...$resources)
     {
@@ -222,7 +219,7 @@ abstract class Arachne
 
     /**
      * @param HttpResource ...$resources
-     * @return Arachne
+     * @return Engine
      */
     public function schedule(HttpResource ...$resources)
     {
@@ -279,7 +276,7 @@ abstract class Arachne
 
     /**
      * @param array $config
-     * @return Arachne
+     * @return Engine
      */
     public function addHandlers(array $config)
     {
@@ -428,7 +425,7 @@ abstract class Arachne
 
     /**
      * @param $mode
-     * @return Arachne
+     * @return Engine
      */
     public function prepareEnv($mode = Mode::RESUME)
     {

@@ -115,7 +115,7 @@ $container['scraper'] = function ($c) {
     $docManager = $c['documentManager'];
     $requestFactory = $c['requestFactory'];
     $eventDispatcher = $c['eventDispatcher'];
-    return new Async($logger, $client, $identityRotator, $scheduler, $docManager, $requestFactory, $eventDispatcher);
+    return new \Arachne\Engine\Parallel($logger, $client, $identityRotator, $scheduler, $docManager, $requestFactory, $eventDispatcher);
 };
 
 $container['scheduler'] = function ($c) {
@@ -183,7 +183,7 @@ $container['createDelayHandler'] = $container->protect(function(LoggerInterface 
 
 $container['httpClient'] = function ($c) {
     $logger = $c['logger'];
-    $stack = HandlerStack::create(new CurlMultiHandler(
+    $stack = HandlerStack::create(new \GuzzleHttp\Handler\CurlHandler(
         ['handle_factory' => new CurlFactory(0)]
     ));
     $stack->push(Middleware::retry($c['createRetryHandler']($logger), $c['createDelayHandler']($logger)));

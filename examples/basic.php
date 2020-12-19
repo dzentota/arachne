@@ -9,7 +9,8 @@ use Arachne\ResultSet;
 use Psr\Http\Message\ResponseInterface;
 use Respect\Validation\Validator as v;
 
-require 'src/services.php';
+//require 'src/services.php';
+require 'src/services_parallel.php';
 
 class NewsIntro extends Item
 {

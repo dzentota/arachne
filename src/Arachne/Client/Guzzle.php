@@ -2,23 +2,50 @@
 
 namespace Arachne\Client;
 
-use Arachne\Arachne;
-use Arachne\Client\Events\RequestPrepared;
-use Arachne\Client\Events\ResponseReceived;
-use Arachne\Exceptions\NoGatewaysLeftException;
-use Arachne\Exceptions\ParsingResponseException;
 use Arachne\Gateway\Localhost;
-use Arachne\HttpResource;
 use Arachne\Identity\Identity;
+use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Cookie\CookieJar;
-use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Promise\PromiseInterface;
+use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
-use function GuzzleHttp\Promise\settle;
 
-class Guzzle extends Arachne
+class Guzzle implements \Arachne\Client\ClientInterface
 {
-    protected function prepareConfig(Identity $identity): array
+    protected $httpClient;
+
+    public function __construct(ClientInterface $httpClient)
     {
+        $this->httpClient = $httpClient;
+    }
+
+    /**
+     * @return ClientInterface
+     */
+    public function getHttpClient(): ClientInterface
+    {
+        return $this->httpClient;
+    }
+
+    /**
+     * @param ClientInterface $httpClient
+     * @return $this
+     */
+    public function setHttpClient(ClientInterface $httpClient): Guzzle
+    {
+        $this->httpClient = $httpClient;
+        return $this;
+    }
+
+    /**
+     * @param $identity
+     * @return array
+     */
+    public function prepareConfig(?Identity $identity = null): array
+    {
+        if ($identity === null) {
+            return $this->getDefaultConfig();
+        }
         $config['allow_redirects']['referer'] = $identity->isSendReferer();
         $config['headers'] = $identity->getDefaultRequestHeaders();
         $config['headers']['User-Agent'] = $identity->getUserAgent();
@@ -30,60 +57,20 @@ class Guzzle extends Arachne
         return $config;
     }
 
-    /**
-     * @param HttpResource[] $resources
-     */
-    public function process(HttpResource ...$resources)
+    protected function getDefaultConfig(): array
     {
-        $requests = (function () use ($resources) {
-            foreach ($resources as $resource) {
-                try {
-                    $identity = $this->identityRotator->switchIdentityFor($resource->getHttpRequest());
-                    $config = $this->prepareConfig($identity);
-                    $request = $resource->getHttpRequest();
-                    $this->logger->info('Loading resource from URL ' . $request->getUri());
-                    $this->logger->debug('Request config: ' . (empty($config) ? '<EMPTY>' : var_export(
-                            array_map(function ($param) {
-                                return ($param instanceof CookieJar) ? true : $param;
-                            }, $config), true)));
-                    $this->eventDispatcher->dispatch(new RequestPrepared($request, $config));
-                    yield $this->client->sendAsync($request, $config)
-                        ->then(
-                            function (ResponseInterface $response) use ($resource, $identity) {
-                                $this->eventDispatcher->dispatch(new ResponseReceived($resource->getHttpRequest(), $response));
-                                $this->identityRotator->evaluateResult($identity, $response);
-                                $this->scheduler->markVisited($resource);
-                                if ($response->getStatusCode() === 200) {
-                                    try {
-                                        $this->handleHttpSuccess($resource, $response);
-                                    } catch (ParsingResponseException $exception) {
-                                        $this->handleException($resource, $response, $exception);
-                                    }
-                                } else {
-                                    $this->handleHttpFail($resource, $response);
-                                }
-                                $this->handleAnyway($resource, $response);
-                            },
-                            function (RequestException $reason) use ($resource, $identity) {
-                                if (null !== $reason->getResponse()) {
-                                    $this->eventDispatcher->dispatch(new ResponseReceived($resource->getHttpRequest(), $reason->getResponse()));
-                                }
-                                try {
-                                    $this->identityRotator->evaluateResult($identity, null);
-                                } catch (\Exception $exception) {
-                                    $this->handleException($resource, $reason->getResponse(), $exception);
-                                }
-                                $this->handleException($resource, $reason->getResponse(), $reason);
-                                $this->handleAnyway($resource, $reason->getResponse());
-                            }
-                        );
-                } catch (NoGatewaysLeftException $exception) {
-                    $this->handleException($resource, null, $exception);
-                    $this->shutdown();
-                }
-            }
-        })();
+        $config['allow_redirects']['referer'] = true;
+        $config['cookies'] = new CookieJar();
+        return $config;
+    }
 
-        settle($requests)->wait();
+    public function send(RequestInterface $request, array $options = []): ResponseInterface
+    {
+        return $this->getHttpClient()->send($request, $options);
+    }
+
+    public function sendAsync(RequestInterface $request, array $options = []): PromiseInterface
+    {
+        return $this->getHttpClient()->sendAsync($request, $options);
     }
 }

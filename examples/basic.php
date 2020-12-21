@@ -9,8 +9,11 @@ use Arachne\ResultSet;
 use Psr\Http\Message\ResponseInterface;
 use Respect\Validation\Validator as v;
 
+ini_set('display_errors',1);
+error_reporting(E_ALL);
 //require 'src/services.php';
 require 'src/services_parallel.php';
+//require 'src/services_webdriver.php';
 
 class NewsIntro extends Item
 {
@@ -37,8 +40,11 @@ class NewsContent extends Item
     }
 }
 
-$container['scraper']
-    ->prepareEnv(Mode::CLEAR)
+/**
+ * @var Arachne\Engine\Parallel $scraper
+ */
+$scraper = $container['scraper'];
+    $scraper->prepareEnv(Mode::CLEAR)
     ->addHandlers(
         [
             'success:rss' => function (ResponseInterface $response, ResultSet $resultSet) use ($container) {

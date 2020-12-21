@@ -1,111 +1,18 @@
 <?php
 
 use Arachne\Client\Guzzle;
-use Arachne\Engine\Async;
-use Arachne\Gateway\Gateway;
-use Arachne\Gateway\GatewayProfile;
-use Arachne\Gateway\GatewayServer;
-use Arachne\Identity\RoundRobinIdentityRotator;
-use Gaufrette\Adapter\Local;
-use Gaufrette\Filesystem;
-use GuzzleHttp\Client;
-use GuzzleHttp\Exception\ConnectException;
-use GuzzleHttp\Exception\RequestException;
-use GuzzleHttp\Handler\CurlFactory;
-use GuzzleHttp\Handler\CurlMultiHandler;
-use GuzzleHttp\HandlerStack;
-use GuzzleHttp\Middleware;
-use Http\Message\MessageFactory\DiactorosMessageFactory;
-use Jmikola\WildcardEventDispatcher\WildcardEventDispatcher;
-use Monolog\Handler\StreamHandler;
-use Psr\Http\Message\RequestInterface;
-use Psr\Http\Message\ResponseInterface;
-use Psr\Log\LoggerInterface;
-use Arachne\BlobsStorage\Gaufrette;
-use Arachne\Document\DocumentLogger;
-use Arachne\Document\InMemory as InMemoryStorage;
-use Arachne\Document\Manager;
+use Arachne\Engine\Parallel;
 use Arachne\Event\Event;
 use Arachne\Event\EventSummaryInterface;
-use Arachne\Filter\FilterLogger;
-use Arachne\Filter\InMemory as InMemoryFilter;
-use Arachne\Frontier\FrontierLogger;
-use Arachne\Frontier\InMemory as InMemoryFrontier;
-use Arachne\Identity\IdentitiesCollection;
-use Arachne\Identity\Identity;
-use Arachne\Scheduler;
+use GuzzleHttp\Client;
+use GuzzleHttp\Handler\CurlFactory;
+use GuzzleHttp\Handler\CurlHandler;
+use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Middleware;
+use Jmikola\WildcardEventDispatcher\WildcardEventDispatcher;
 use Symfony\Component\EventDispatcher\EventDispatcher;
-use Pimple\Container;
-use \Bramus\Monolog\Formatter\ColoredLineFormatter;
 
-$container = new Container();
-
-$container['HTTP_MAX_RETRIES'] = 2;
-$container['LOGGER_LEVEL'] = \Monolog\Logger::DEBUG;
-$container['CONNECT_TIMEOUT'] = 5;
-$container['TIMEOUT'] = 5;
-$container['MAX_REDIRECTS'] = 5;
-
-$container['logger'] = function ($c) {
-    $stream = new StreamHandler('php://stderr', $c['LOGGER_LEVEL']);
-    $formatter = new ColoredLineFormatter();
-    $stream->setFormatter($formatter);
-    $logger = new \Monolog\Logger('Arachne');
-    $logger->pushHandler($stream);
-    return $logger;
-};
-
-$container['frontier'] = function ($c) {
-    $logger = $c['logger'];
-    $frontier = new FrontierLogger(new InMemoryFrontier(new \SplPriorityQueue()), $logger);
-//    $frontier = new InMemoryFrontier(new \SplPriorityQueue());
-    return $frontier;
-};
-
-$container['gatewayProfile'] = function ($c) {
-    return new GatewayProfile();
-};
-
-$container['identities'] = function ($c) {
-    $gatewayServer = GatewayServer::localhost();
-    $gateway = new Gateway($c['eventDispatcher'], $gatewayServer, $c['gatewayProfile']);
-    $defaultUserAgent = \Campo\UserAgent::random();
-    $identity = new Identity($gateway, $defaultUserAgent);
-    return new IdentitiesCollection($identity);
-};
-
-$container['identityRotator'] = function ($c) {
-    return new RoundRobinIdentityRotator($c['identities']);
-};
-
-$container['documentStorage'] = function ($c) {
-    $logger = $c['logger'];
-    return new DocumentLogger(new InMemoryStorage(), $logger);
-};
-
-$container['filter'] = function ($c) {
-    $logger = $c['logger'];
-    return new FilterLogger(new InMemoryFilter(), $logger);
-};
-
-$container['documentManager'] = function ($c) {
-    $filesystem = $c['filesystem'];
-    $blobsStorage = new Gaufrette($c['logger'], $filesystem);
-    return new Manager($c['documentStorage'], $blobsStorage);
-};
-
-$container['requestFactory'] = function ($c) {
-    return new DiactorosMessageFactory();
-};
-
-$container['responseFactory'] = function ($c) {
-    return new DiactorosMessageFactory();
-};
-
-$container['filesystem'] = function ($c) {
-    $filesystem = new Filesystem(new Local(sys_get_temp_dir() . DIRECTORY_SEPARATOR  . 'arachne', true));
-    return $filesystem;
-};
+require __DIR__ . '/services.php';
 
 $container['scraper'] = function ($c) {
     $logger = $c['logger'];
@@ -115,75 +22,12 @@ $container['scraper'] = function ($c) {
     $docManager = $c['documentManager'];
     $requestFactory = $c['requestFactory'];
     $eventDispatcher = $c['eventDispatcher'];
-    return new \Arachne\Engine\Parallel($logger, $client, $identityRotator, $scheduler, $docManager, $requestFactory, $eventDispatcher);
+    return new Parallel($logger, $client, $identityRotator, $scheduler, $docManager, $requestFactory, $eventDispatcher);
 };
-
-$container['scheduler'] = function ($c) {
-    return new Scheduler($c['frontier'], $c['filter'],
-        $c['logger']);
-};
-
-$container['isServerError'] = $container->protect(function(ResponseInterface $response = null)
-{
-    return $response && $response->getStatusCode() >= 500;
-});
-
-$container['isConnectError'] = $container->protect(
-    function(RequestException $exception = null)
-    {
-        return $exception instanceof ConnectException;
-    }
-);
-
-$container['createRetryHandler'] = $container->protect(
-    function(LoggerInterface $logger) use ($container)
-    {
-        return function (
-            $retries,
-            RequestInterface $request,
-            ResponseInterface $response = null,
-            RequestException $exception = null
-        ) use ($logger, $container) {
-            if ($retries >= $container['HTTP_MAX_RETRIES']) {
-                $logger->error(sprintf(
-                    'Max number [%s] of retries reached for %s %s / %s',
-                    $container['HTTP_MAX_RETRIES'],
-                    $request->getMethod(),
-                    $request->getUri(),
-                    $response ? 'status code: ' . $response->getStatusCode() : $exception->getMessage()
-                ));
-
-                return false;
-            }
-            if (!($container['isServerError']($response) || $container['isConnectError']($exception))) {
-
-                return false;
-            }
-            $logger->warning(sprintf(
-                'Retrying %s %s %s/%s, %s',
-                $request->getMethod(),
-                $request->getUri(),
-                $retries + 1,
-                $container['HTTP_MAX_RETRIES'],
-                $response ? 'status code: ' . $response->getStatusCode() : $exception->getMessage()
-            ), [$request->getHeader('Host')[0]]);
-            return true;
-        };
-    }
-);
-
-$container['createDelayHandler'] = $container->protect(function(LoggerInterface $logger)
-{
-    return function ($retries) use ($logger) {
-        $delay = 100 * (int)pow(2, $retries - 1);
-        $logger->debug("Sleeping $delay milliseconds before retry");
-        return $delay;
-    };
-});
 
 $container['httpClient'] = function ($c) {
     $logger = $c['logger'];
-    $stack = HandlerStack::create(new \GuzzleHttp\Handler\CurlHandler(
+    $stack = HandlerStack::create(new CurlHandler(
         ['handle_factory' => new CurlFactory(0)]
     ));
     $stack->push(Middleware::retry($c['createRetryHandler']($logger), $c['createDelayHandler']($logger)));

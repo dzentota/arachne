@@ -71,9 +71,15 @@ class Parallel extends Engine
                  * @param \ArrayObject $storage a persistent storage for the current child process
                  */
                     function (array $input, $semaphore, $storage) {
+                        $config = $input['config'];
                         $resource = $input['resource'];
                         $request = $resource->getHttpRequest();
-                        $config = $input['config'];
+                        $this->logger->info('Loading resource from URL ' . $request->getUri());
+                        $this->logger->debug('Request config: ' . (empty($config) ? '<EMPTY>' : var_export(
+                                array_map(function ($param) {
+                                    return ($param instanceof CookieJar) ? true : $param;
+                                }, $config), true)));
+                        $this->eventDispatcher->dispatch(new RequestPrepared($request, $config));
                         try {
                             $response = $this->client->send($request, $config);
                             return ['resource' => $resource, 'responseString' => Serializer::toString($response)];
@@ -88,13 +94,6 @@ class Parallel extends Engine
         foreach ($resources as $resource) {
             $identity = $this->identityRotator->switchIdentityFor($resource->getHttpRequest());
             $config = $this->client->prepareConfig($identity);
-            $request = $resource->getHttpRequest();
-            $this->logger->info('Loading resource from URL ' . $request->getUri());
-            $this->logger->debug('Request config: ' . (empty($config) ? '<EMPTY>' : var_export(
-                    array_map(function ($param) {
-                        return ($param instanceof CookieJar) ? true : $param;
-                    }, $config), true)));
-            $this->eventDispatcher->dispatch(new RequestPrepared($request, $config));
             $wp->run(['resource' => $resource, 'config' => $config]);
         }
         $wp->waitForAllWorkers(); // wait for all workers

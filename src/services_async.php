@@ -1,16 +1,12 @@
 <?php
 
 use Arachne\Client\Guzzle;
-use Arachne\Engine\Parallel;
-use Arachne\Event\Event;
-use Arachne\Event\EventSummaryInterface;
+use Arachne\Engine\Async;
 use GuzzleHttp\Client;
 use GuzzleHttp\Handler\CurlFactory;
-use GuzzleHttp\Handler\CurlHandler;
+use GuzzleHttp\Handler\CurlMultiHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Middleware;
-use Jmikola\WildcardEventDispatcher\WildcardEventDispatcher;
-use Symfony\Component\EventDispatcher\EventDispatcher;
 
 require __DIR__ . '/services.php';
 
@@ -22,12 +18,12 @@ $container['scraper'] = function ($c) {
     $docManager = $c['documentManager'];
     $requestFactory = $c['requestFactory'];
     $eventDispatcher = $c['eventDispatcher'];
-    return new Parallel($logger, $client, $identityRotator, $scheduler, $docManager, $requestFactory, $eventDispatcher);
+    return new Async($logger, $client, $identityRotator, $scheduler, $docManager, $requestFactory, $eventDispatcher);
 };
 
 $container['httpClient'] = function ($c) {
     $logger = $c['logger'];
-    $stack = HandlerStack::create(new CurlHandler(
+    $stack = HandlerStack::create(new CurlMultiHandler(
         ['handle_factory' => new CurlFactory(0)]
     ));
     $stack->push(Middleware::retry($c['createRetryHandler']($logger), $c['createDelayHandler']($logger)));

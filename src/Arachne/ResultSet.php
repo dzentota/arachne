@@ -60,10 +60,10 @@ class ResultSet
      * @param array $headers
      * @return $this
      */
-    public function addResource($type, $url, $item = null, $method = 'GET', $body = null, $headers = [])
+    public function addResource($type, $url, $item = null, $method = 'GET', $body = null, $headers = [], array $meta = [])
     {
         $this->addResourceWithPriority(FrontierInterface::PRIORITY_NORMAL, $type, $url, $item, $method, $body,
-            $headers);
+            $headers, $meta);
         return $this;
     }
 
@@ -77,9 +77,9 @@ class ResultSet
      * @param array $headers
      * @return $this
      */
-    public function addHighPriorityResource($type, $url, $item = null, $method = 'GET', $body = null, $headers = [])
+    public function addHighPriorityResource($type, $url, $item = null, $method = 'GET', $body = null, $headers = [], array $meta = [])
     {
-        $this->addResourceWithPriority(FrontierInterface::PRIORITY_HIGH, $type, $url, $item, $method, $body, $headers);
+        $this->addResourceWithPriority(FrontierInterface::PRIORITY_HIGH, $type, $url, $item, $method, $body, $headers, $meta);
         return $this;
     }
 
@@ -99,11 +99,15 @@ class ResultSet
         $item = null,
         $method = 'GET',
         $body = null,
-        $headers = []
+        array $headers = [],
+        array $meta = []
     ) {
         $httpRequest = $this->requestFactory->createRequest($method, $url, $headers, $body?? null)
             ->withHeader('Referer', $this->resource->getUrl());
         $newResource = new HttpResource($httpRequest, $type);
+        if (!empty($meta)) {
+            $newResource->addMeta($meta);
+        }
         if (empty($item)) {
             $this->newResources[$priority][] = $newResource;
         } else {

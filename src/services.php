@@ -1,7 +1,7 @@
 <?php
 
 use Arachne\Client\Guzzle;
-use Arachne\Engine\Async;
+use Arachne\Engine\Basic;
 use Arachne\Gateway\Gateway;
 use Arachne\Gateway\GatewayProfile;
 use Arachne\Gateway\GatewayServer;
@@ -12,7 +12,7 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Handler\CurlFactory;
-use GuzzleHttp\Handler\CurlMultiHandler;
+use GuzzleHttp\Handler\CurlHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Middleware;
 use Http\Message\MessageFactory\DiactorosMessageFactory;
@@ -115,7 +115,7 @@ $container['scraper'] = function ($c) {
     $docManager = $c['documentManager'];
     $requestFactory = $c['requestFactory'];
     $eventDispatcher = $c['eventDispatcher'];
-    return new Async($logger, $client, $identityRotator, $scheduler, $docManager, $requestFactory, $eventDispatcher);
+    return new Basic($logger, $client, $identityRotator, $scheduler, $docManager, $requestFactory, $eventDispatcher);
 };
 
 $container['scheduler'] = function ($c) {
@@ -183,7 +183,7 @@ $container['createDelayHandler'] = $container->protect(function(LoggerInterface 
 
 $container['httpClient'] = function ($c) {
     $logger = $c['logger'];
-    $stack = HandlerStack::create(new CurlMultiHandler(
+    $stack = HandlerStack::create(new CurlHandler(
         ['handle_factory' => new CurlFactory(0)]
     ));
     $stack->push(Middleware::retry($c['createRetryHandler']($logger), $c['createDelayHandler']($logger)));

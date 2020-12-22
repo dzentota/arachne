@@ -11,7 +11,7 @@ use Respect\Validation\Validator as v;
 
 ini_set('display_errors',1);
 error_reporting(E_ALL);
-//require 'src/services.php';
+require 'src/services.php';
 require 'src/services_parallel.php';
 //require 'src/services_webdriver.php';
 

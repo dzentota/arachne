@@ -262,7 +262,12 @@ abstract class Engine
             $checkIfFrontierEmpty = false;
             $batch = [];
             for ($i = 0; $i < $this->concurrency; $i++) {
-                $resource = $this->scheduler->nextItem();
+                try {
+                    $resource = $this->scheduler->nextItem();
+                } catch (\Exception $exception) {
+                    $this->logger->critical($exception->getMessage());
+                    continue;
+                }
                 if ($resource === null) {
                     break;
                 }

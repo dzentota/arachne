@@ -14,7 +14,7 @@ error_reporting(E_ALL);
 require 'src/services.php';
 require 'src/services_mongo.php';
 
-$container['MONGO_DB_NAME'] = 'ciamarket';
+$container['MONGO_DB_NAME'] = 'egulbele';
 
 class Product extends Item
 {
@@ -41,34 +41,31 @@ class Product extends Item
 }
 
 $container['scraper']
-    ->prepareEnv(Mode::RESUME)
+    ->prepareEnv(Mode::CLEAR)
     ->addHandlers(
         [
             'success:home' => function (ResponseInterface $response, ResultSet $resultSet) use ($container) {
                 $content = $response->getBody()->getContents();
                 $crawler = new DomCrawler($content);
-                $crawler->filter('.tree ul li a')
+                $crawler->filter('#megamenu-row-3-1 .category > a')
                     ->each(function (DomCrawler $node) use ($resultSet) {
-
                         $resultSet->addResource(
                             'category', $node->attr('href')
                         );
                     });
             },
-            'success:category' => function (ResponseInterface $response, ResultSet $resultSet) {
+            'success:category' => function (ResponseInterface $response, ResultSet $resultSet) use($container){
                 $content = $response->getBody()->getContents();
-                $category = (new DomCrawler($content))->filter('h1')->text();
 
-                (new DomCrawler($content))->filter('.product-flags-plist')
-                    ->each(function (DomCrawler $crawler) use ($resultSet, $category) {
+                (new DomCrawler($content))->filter('.products .product-title a')
+                    ->each(function (DomCrawler $crawler) use ($resultSet, $container) {
+                        if (empty(trim($crawler->attr('href')))) {
+                            $container['logger']->critical("empty href " . $crawler->text());
+                            return;
+                        }
                         $resultSet->addHighPriorityResource(
                             'product',
-                            $crawler->attr('href'),
-                            null,
-                            'GET',
-                            null,
-                            [],
-                            ['category' => $category]
+                            trim($crawler->attr('href'))
                         );
                     });
                 (new DomCrawler($content))->filter('.page-list a')
@@ -79,15 +76,15 @@ $container['scraper']
             'success:product' => function (ResponseInterface $response, ResultSet $resultSet) {
                 $content = $response->getBody()->getContents();
                 $crawler = new DomCrawler($content);
-                $data['ean'] = $crawler->filter('[itemprop=gtin13]')->attr('content');
+                $data['ean'] = trim($crawler->filter('[itemprop=sku]')->text());
                 $data['title'] = $crawler->filter('h1')->text();
-                $data['category'] = $resultSet->getResource()->getMeta('category', 'unknown');
+                $data['category'] = trim($crawler->filter('.breadcrumb [itemprop=name]')->text());
                 $data['url'] = $resultSet->getResource()->getUrl();
                 $data['image'] = $crawler->filter('.js-qv-product-cover')->attr('src')?? '';
-                $data['price'] = floatval( $crawler->filter('.current-price .price')->attr('content'));
+                $data['price'] = floatval( $crawler->filter('.price [itemprop=price]')->attr('content'));
                 $data['description'] = trim((string)$crawler->filter('#description .product-description')->text());
                 $resultSet->addItem(new Product($data));
             }
         ]
-    )->scrape(HttpResource::fromUrl('https://parduotuve.ciamarket.lt/', 'home'))//->dumpDocuments()
+    )->scrape(HttpResource::fromUrl('https://e-gulbele.lt/', 'home'))//->dumpDocuments()
 ;

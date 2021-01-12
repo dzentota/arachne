@@ -44,16 +44,20 @@ class Basic extends Engine
                 $this->handleException($resource, null, $exception);
                 $this->shutdown();
             } catch (\Exception $exception) {
-                if (isset($response)) {
-                    $this->eventDispatcher->dispatch(new ResponseReceived($resource->getHttpRequest(), $response));
-                }
                 try {
                     $this->identityRotator->evaluateResult($identity, null);
                 } catch (\Exception $exception) {
                     $this->handleException($resource, $response, $exception);
                 }
-                $this->handleException($resource, $response, $exception);
-                $this->handleAnyway($resource, $response);
+                if (isset($response)) {
+                    $this->eventDispatcher->dispatch(new ResponseReceived($resource->getHttpRequest(), $response));
+                    $this->handleException($resource, $response, $exception);
+                    $this->handleAnyway($resource, $response);
+                } else {
+                    $this->handleException($resource, null, $exception);
+                    $this->handleAnyway($resource, null);
+                }
+
             }
 
         }

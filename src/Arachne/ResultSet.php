@@ -2,6 +2,7 @@
 
 namespace Arachne;
 
+use Arachne\Hash\Hashable;
 use Http\Message\RequestFactory;
 use Arachne\Frontier\FrontierInterface;
 
@@ -11,6 +12,10 @@ use Arachne\Frontier\FrontierInterface;
  */
 class ResultSet
 {
+    /**
+     * @var Hashable[]
+     */
+    private $markedAsVisited = [];
     /**
      * @var \Arachne\HttpResource|HttpResource
      */
@@ -223,4 +228,13 @@ class ResultSet
         return $this->resource;
     }
 
+    public function markVisited(Hashable $hashable)
+    {
+        $this->markedAsVisited[$hashable->getHash()] = $hashable;
+    }
+
+    public function getMarkedAsVisited(): array
+    {
+        return $this->markedAsVisited;
+    }
 }

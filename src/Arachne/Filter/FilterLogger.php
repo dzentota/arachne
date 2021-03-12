@@ -1,7 +1,7 @@
 <?php
 
 namespace Arachne\Filter;
-use Arachne\HttpResource;
+use Arachne\Hash\Hashable;
 
 use Psr\Log\LoggerInterface;
 
@@ -34,10 +34,10 @@ class FilterLogger implements FilterInterface
 
     /**
      * @param string $filterName
-     * @param HttpResource $resource
+     * @param Hashable $resource
      * @return mixed
      */
-    public function add(string $filterName, HttpResource $resource)
+    public function add(string $filterName, Hashable $resource)
     {
         $this->logger->debug(sprintf('Adding new filter [%s][%s]', $filterName, $resource->getHash()));
         $this->filter->add($filterName, $resource);
@@ -45,10 +45,10 @@ class FilterLogger implements FilterInterface
 
     /**
      * @param string $filterName
-     * @param \Arachne\HttpResource|HttpResource $resource
+     * @param Hashable $resource
      * @return mixed
      */
-    public function remove(string $filterName, HttpResource $resource)
+    public function remove(string $filterName, Hashable $resource)
     {
         $this->logger->debug(sprintf('Removing filter [%s][%s]', $filterName, $resource->getHash()));
         $this->filter->remove($filterName, $resource);
@@ -56,10 +56,10 @@ class FilterLogger implements FilterInterface
 
     /**
      * @param string $filterName
-     * @param \Arachne\HttpResource|HttpResource $resource
+     * @param Hashable $resource
      * @return mixed
      */
-    public function exists(string $filterName, HttpResource $resource) : bool
+    public function exists(string $filterName, Hashable $resource) : bool
     {
         $this->logger->debug(sprintf('Checking if filter [%s][%s] exists', $filterName, $resource->getHash()));
         return $this->filter->exists($filterName, $resource);

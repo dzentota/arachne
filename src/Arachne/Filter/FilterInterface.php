@@ -1,8 +1,7 @@
 <?php
 
 namespace Arachne\Filter;
-
-use Arachne\HttpResource;
+use Arachne\Hash\Hashable;
 
 /**
  * Interface FilterInterface
@@ -13,24 +12,24 @@ interface FilterInterface
 
     /**
      * @param string $filterName
-     * @param HttpResource $resource
+     * @param Hashable $resource
      * @return mixed
      */
-    public function add(string $filterName, HttpResource $resource);
+    public function add(string $filterName, Hashable $resource);
 
     /**
      * @param string $filterName
-     * @param \Arachne\HttpResource|HttpResource $resource
+     * @param Hashable $resource
      * @return mixed
      */
-    public function remove(string $filterName, HttpResource $resource);
+    public function remove(string $filterName, Hashable $resource);
 
     /**
      * @param string $filterName
-     * @param \Arachne\HttpResource|HttpResource $resource
+     * @param Hashable $resource
      * @return mixed
      */
-    public function exists(string $filterName, HttpResource $resource) : bool ;
+    public function exists(string $filterName, Hashable $resource) : bool ;
 
     /**
      * @param string $filterName

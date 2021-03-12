@@ -396,6 +396,12 @@ abstract class Engine
                 $handler($response, $resultSet);
                 $this->logger->info(sprintf('Resource [%s] %s has been parsed ', $resource->getType(),
                     $resource->getUrl()));
+                if ($markedVisited = $resultSet->getMarkedAsVisited()) {
+                    foreach ($markedVisited as $visited) {
+                        $this->scheduler->getFilter()->add('visited', $visited);
+                        $this->scheduler->getFilter()->remove('scheduled', $visited);
+                    }
+                }
                 $this->scheduleNewResources($resultSet);
                 $this->saveParsedItems($resultSet);
                 $this->saveBlobs($resource, $resultSet, (string)$response->getBody());

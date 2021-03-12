@@ -3,7 +3,7 @@
 namespace Arachne\Filter;
 
 use MongoDB\Client;
-use Arachne\HttpResource;
+use Arachne\Hash\Hashable;
 
 /**
  * @todo add prefix for filterName like for frontier
@@ -25,7 +25,7 @@ class Mongo implements FilterInterface
     }
 
 
-    public function add(string $filterName, HttpResource $resource)
+    public function add(string $filterName, Hashable $resource)
     {
         $this->storage->{$filterName}->updateOne(
             ['_id' => $resource->getHash()],
@@ -34,14 +34,14 @@ class Mongo implements FilterInterface
         );
     }
 
-    public function remove(string $filterName, HttpResource $resource)
+    public function remove(string $filterName, Hashable $resource)
     {
         $this->storage->{$filterName}->deleteOne(
             ['_id' => $resource->getHash()]
         );
     }
 
-    public function exists(string $filterName, HttpResource $resource) : bool
+    public function exists(string $filterName, Hashable $resource) : bool
     {
         $exist = $this->storage->{$filterName}->findOne(
             ['_id' => $resource->getHash()], ['_id']

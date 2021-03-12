@@ -1,11 +1,12 @@
 <?php
 namespace Arachne;
 
+use Arachne\Hash\Hashable;
 use Psr\Http\Message\RequestInterface;
 use Zend\Diactoros\Request;
 use Zend\Diactoros\Request\Serializer;
 
-class HttpResource implements \Serializable
+class HttpResource implements \Serializable, Hashable
 {
 
     /**

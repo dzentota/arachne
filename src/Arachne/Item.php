@@ -61,7 +61,7 @@ class Item implements \Serializable
      * @return bool
      * @throws \Exception
      */
-    final public function validate()
+    final public function validate(): bool
     {
         $validator = $this->getValidator();
         if (!$validator || !$validator instanceof \Respect\Validation\Validator) {
@@ -70,8 +70,9 @@ class Item implements \Serializable
             );
         }
         $validator->attribute('id', v::notEmpty()->scalarVal())
-            ->attribute('type', v::notEmpty()->alnum());
-        return $validator->assert($this);
+            ->attribute('type', v::notEmpty()->alnum())
+            ->assert($this);
+        return true;
     }
 
 

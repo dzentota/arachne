@@ -21,7 +21,7 @@
         "qxsch/worker-pool": "*",
         "guzzlehttp/psr7": "^1.3",
         "php-http/message": "^1.4",
-        "mongodb/mongodb": "^1.1",
+        "mongodb/mongodb": "~1.6.0",
         "campo/random-user-agent": "^1.2",
         "symfony/event-dispatcher": "^4.0",
         "jmikola/wildcard-event-dispatcher": "^2.0",

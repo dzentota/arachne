@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "8e659394bb6e36b37533bb6fe6d20748",
+    "content-hash": "26404ff1a157f49a28799f84eed30b0e",
     "packages": [
         {
             "name": "bramus/ansi-php",
@@ -688,22 +688,22 @@
         },
         {
             "name": "mongodb/mongodb",
-            "version": "v1.6.x-dev",
+            "version": "v1.5.x-dev",
             "source": {
                 "type": "git",
                 "url": "https://github.com/mongodb/mongo-php-library.git",
-                "reference": "ec6eaaf06500febd3519d5559ec35044558651b6"
+                "reference": "56e08eeb7d228c8ced6a8e505288555be3bb9466"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/mongodb/mongo-php-library/zipball/ec6eaaf06500febd3519d5559ec35044558651b6",
-                "reference": "ec6eaaf06500febd3519d5559ec35044558651b6",
+                "url": "https://api.github.com/repos/mongodb/mongo-php-library/zipball/56e08eeb7d228c8ced6a8e505288555be3bb9466",
+                "reference": "56e08eeb7d228c8ced6a8e505288555be3bb9466",
                 "shasum": ""
             },
             "require": {
                 "ext-hash": "*",
                 "ext-json": "*",
-                "ext-mongodb": "^1.7",
+                "ext-mongodb": "^1.6",
                 "php": "^5.6 || ^7.0"
             },
             "require-dev": {
@@ -715,7 +715,7 @@
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "1.6.x-dev"
+                    "dev-master": "1.5.x-dev"
                 }
             },
             "autoload": {
@@ -754,9 +754,9 @@
             ],
             "support": {
                 "issues": "https://github.com/mongodb/mongo-php-library/issues",
-                "source": "https://github.com/mongodb/mongo-php-library/tree/v1.6"
+                "source": "https://github.com/mongodb/mongo-php-library/tree/v1.5"
             },
-            "time": "2021-07-14T15:28:19+00:00"
+            "time": "2021-07-14T15:28:11+00:00"
         },
         {
             "name": "monolog/monolog",

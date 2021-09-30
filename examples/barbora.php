@@ -11,12 +11,12 @@ use Zend\Diactoros\Request;
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 require 'src/services.php';
-//require 'src/services_async.php';
+require 'src/services_async.php';
 //require 'src/services_mongo.php';
 
 //$container['MONGO_DB_NAME'] = 'barbora';
 
-$h = fopen('barbora.tess.csv', 'w') or die('Cannot open csv file for writing');
+$h = fopen('barbora.rescan.csv', 'w') or die('Cannot open csv file for writing');
 
 /**
  * @var Arachne\Engine $engine
@@ -46,9 +46,9 @@ $engine->prepareEnv(Mode::RESUME)
                 $crawler->filter('loc')
                     ->each(function (DomCrawler $crawler) use ($resultSet, &$start) {
                         $href = $crawler->text();
-//                        if (false === strpos($href, 'https://barbora.lt/produktai/')) {
-//                            return;
-//                        }
+                        if (false === strpos($href, 'https://barbora.lt/produktai/')) {
+                            return;
+                        }
 //                        if ($start === false) {
 //                            if ($href === 'https://barbora.lt/produktai/spalvoti-smeigtukai-milan-1-vnt-822391') {
 //                                $start = true;
@@ -83,8 +83,8 @@ $engine->prepareEnv(Mode::RESUME)
                 $result[] = $category3;
                 $result[] = $quantity;
                 $result[] = $unit;
-                $result[] = (float) $data['price'];
-                $result[] = $data['comparative_unit_price'];
+                $result[] = str_replace('.', ',', (float) $data['price']);
+                $result[] = str_replace('.', ',', $data['comparative_unit_price']);
                 $discountPrice = $crawler->filter('.b-product-crossed-out-price')->text();
                 $discountPrice = floatval(str_replace(['€', ' ', ','], ['', '', '.'], $discountPrice));
                 $discountPrice = str_replace('.', ',', $discountPrice);

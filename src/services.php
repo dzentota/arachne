@@ -40,7 +40,7 @@ use \Bramus\Monolog\Formatter\ColoredLineFormatter;
 
 $container = new Container();
 
-$container['HTTP_MAX_RETRIES'] = 2;
+$container['HTTP_MAX_RETRIES'] = 4;
 $container['LOGGER_LEVEL'] = \Monolog\Logger::DEBUG;
 $container['CONNECT_TIMEOUT'] = 5;
 $container['TIMEOUT'] = 5;
@@ -175,7 +175,7 @@ $container['createRetryHandler'] = $container->protect(
 $container['createDelayHandler'] = $container->protect(function(LoggerInterface $logger)
 {
     return function ($retries) use ($logger) {
-        $delay = 100 * (int)pow(2, $retries - 1);
+        $delay = 3000 * (int)pow(2, $retries - 1);
         $logger->debug("Sleeping $delay milliseconds before retry");
         return $delay;
     };
@@ -189,7 +189,8 @@ $container['httpClient'] = function ($c) {
     $stack->push(Middleware::retry($c['createRetryHandler']($logger), $c['createDelayHandler']($logger)));
 
     $client = new Client([
-        'handler' => HandlerStack::create(),
+//        'handler' => HandlerStack::create(),
+        'handler' => $stack,
         'connect_timeout' => $c['CONNECT_TIMEOUT'],
         'timeout' => $c['TIMEOUT'],
         'http_errors' => false,

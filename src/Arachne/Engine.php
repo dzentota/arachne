@@ -3,6 +3,7 @@
 namespace Arachne;
 
 use Arachne\Client\ClientInterface;
+use Arachne\Frontier\InMemory;
 use Arachne\Identity\IdentityRotatorInterface;
 use Http\Message\RequestFactory;
 use Psr\Http\Message\ResponseInterface;
@@ -21,6 +22,7 @@ abstract class Engine
     public $reschedulePreviouslyFailedResources = true;
     public $shutdownOnException = false;
 
+    protected $scenario = 'default';
     protected $failedResources = [];
     /**
      * @var ClientInterface
@@ -108,6 +110,12 @@ abstract class Engine
                     $this->scheduler->schedule($failedResource);
                 }
             }
+            $scenarioQueue = sys_get_temp_dir() . '/arachne_' . $this->scenario . '_queue.php';
+            $frontier = [];
+            while ($item = $this->scheduler->getFrontier()->nextItem()) {
+                $frontier[] = $item;
+            }
+            file_put_contents($scenarioQueue, serialize($frontier));
         });
     }
 
@@ -438,12 +446,30 @@ abstract class Engine
      * @param $mode
      * @return Engine
      */
-    public function prepareEnv($mode = Mode::RESUME)
+    public function prepareEnv(string $mode = Mode::RESUME, string $scenario = 'default')
     {
+        $this->scenario = $scenario;
+        $scenarioQueue = sys_get_temp_dir() . '/arachne_'. $scenario . '_queue.php';
+        if ($mode === Mode::RESUME) {
+//            if (file_exists($scenarioQueue)) {
+//                $frontier = unserialize($scenarioQueue);
+//                if (!empty($frontier)) {
+//                    foreach ($frontier as $item) {
+//        //                $this->scheduler->schedule($item);
+//                    }
+//                }
+//            }
+        }
         if ($mode === Mode::REFRESH) {
+            if (file_exists($scenarioQueue)) {
+                unlink($scenarioQueue);
+            }
             $this->scheduler->clear();
         }
         if ($mode === Mode::CLEAR) {
+            if (file_exists($scenarioQueue)) {
+                unlink($scenarioQueue);
+            }
             $this->scheduler->clear();
             $this->docManager->getDocStorage()->clear();
             $this->docManager->getBlobsStorage()->clear();

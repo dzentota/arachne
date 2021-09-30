@@ -16,7 +16,7 @@ services:
       ME_CONFIG_MONGODB_ADMINUSERNAME: root
       ME_CONFIG_MONGODB_ADMINPASSWORD: root
   web:
-    image: thecodingmachine/php:7.2-v1-apache-node8
+    image: thecodingmachine/php:7.4-v4-apache-node10
     hostname: 'arachne'
     environment:
       PHP_INI_ERROR_REPORTING: E_ERROR

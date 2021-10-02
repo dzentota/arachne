@@ -10,8 +10,8 @@ class OrderedPriorityQueue extends \SplPriorityQueue
      * @param mixed $value
      * @param mixed $priority
      */
-    public function insert($value, $priority)
+    public function insert($value, $priority): bool
     {
-        parent::insert($value, array($priority, $this->serial--));//To force elements to go in insertion order
+        return parent::insert($value, array($priority, $this->serial--));//To force elements to go in insertion order
     }
 }

@@ -14,7 +14,6 @@ error_reporting(E_ALL);
 require 'src/services.php';
 $container['PROJECT'] = 'basic_demo';
 //require 'src/services_parallel.php';
-//require 'src/services_webdriver.php';
 
 class NewsIntro extends Item
 {

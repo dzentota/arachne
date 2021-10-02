@@ -3,6 +3,8 @@
 namespace Arachne;
 
 use Arachne\Client\ClientInterface;
+use Arachne\Dumper\DumperInterface;
+use Arachne\Dumper\OutputStream;
 use Arachne\Identity\IdentityRotatorInterface;
 use Http\Message\RequestFactory;
 use Psr\Http\Message\ResponseInterface;
@@ -64,10 +66,13 @@ abstract class Engine
      */
     protected $handlers = [];
 
+    private DumperInterface $dumper;
+
     /**
      * @var EventDispatcherInterface
      */
     protected $eventDispatcher;
+
     /**
      * Arachne constructor.
      * @param LoggerInterface $logger
@@ -133,6 +138,12 @@ abstract class Engine
     public function getCurrentItem()
     {
         return $this->currentItem;
+    }
+
+    public function setDumper(DumperInterface $dumper)
+    {
+        $this->dumper = $dumper;
+        return $this;
     }
 
     /**
@@ -204,9 +215,8 @@ abstract class Engine
     public function dumpDocuments($type = null)
     {
         $documentsStorage = $this->docManager->getDocStorage();
-        foreach ($documentsStorage->getIterator($type) as $document) {
-            print_r(is_array($document)? $document : $document->getData());
-        }
+        $dumper = $this->dumper?? new OutputStream;
+        $dumper->dump($documentsStorage->getIterator($type));
         return $this;
     }
 

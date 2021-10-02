@@ -4,7 +4,7 @@ namespace Arachne\Dumper;
 
 class OutputStream implements DumperInterface
 {
-    private string $stream;
+    private $stream;
     public const OUT = 1;
     public const ERROR = 2;
 

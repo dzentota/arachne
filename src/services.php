@@ -45,6 +45,7 @@ $container['LOGGER_LEVEL'] = \Monolog\Logger::DEBUG;
 $container['CONNECT_TIMEOUT'] = 5;
 $container['TIMEOUT'] = 5;
 $container['MAX_REDIRECTS'] = 5;
+$container['PROJECT'] = 'arachne';
 
 $container['logger'] = function ($c) {
     $stream = new StreamHandler('php://stderr', $c['LOGGER_LEVEL']);
@@ -55,10 +56,13 @@ $container['logger'] = function ($c) {
     return $logger;
 };
 
+$container['storage_dir'] = function ($c) {
+    return sys_get_temp_dir() . DIRECTORY_SEPARATOR . $c['PROJECT'];
+};
+
 $container['frontier'] = function ($c) {
     $logger = $c['logger'];
-    $frontier = new FrontierLogger(new InMemoryFrontier(new \SplPriorityQueue()), $logger);
-    return $frontier;
+    return new FrontierLogger(new InMemoryFrontier(new \SplPriorityQueue(), $c['storage_dir']), $logger);
 };
 
 $container['gatewayProfile'] = function ($c) {
@@ -78,13 +82,11 @@ $container['identityRotator'] = function ($c) {
 };
 
 $container['documentStorage'] = function ($c) {
-    $logger = $c['logger'];
-    return new DocumentLogger(new InMemoryStorage(), $logger);
+    return new DocumentLogger(new InMemoryStorage(), $c['logger']);
 };
 
 $container['filter'] = function ($c) {
-    $logger = $c['logger'];
-    return new FilterLogger(new InMemoryFilter(), $logger);
+    return new FilterLogger(new InMemoryFilter($c['storage_dir']), $c['logger']);
 };
 
 $container['documentManager'] = function ($c) {
@@ -102,8 +104,7 @@ $container['responseFactory'] = function ($c) {
 };
 
 $container['filesystem'] = function ($c) {
-    $filesystem = new Filesystem(new Local(sys_get_temp_dir() . DIRECTORY_SEPARATOR  . 'arachne', true));
-    return $filesystem;
+    return new Filesystem(new Local($c['storage_dir'], true));
 };
 
 $container['scraper'] = function ($c) {
@@ -188,7 +189,6 @@ $container['httpClient'] = function ($c) {
     $stack->push(Middleware::retry($c['createRetryHandler']($logger), $c['createDelayHandler']($logger)));
 
     $client = new Client([
-//        'handler' => HandlerStack::create(),
         'handler' => $stack,
         'connect_timeout' => $c['CONNECT_TIMEOUT'],
         'timeout' => $c['TIMEOUT'],

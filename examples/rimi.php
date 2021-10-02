@@ -12,26 +12,25 @@ ini_set('display_errors', 1);
 error_reporting(E_ALL);
 require 'src/services.php';
 require 'src/services_async.php';
+//require 'src/services_doclite.php';
 //require 'src/services_mongo.php';
 
-//$container['MONGO_DB_NAME'] = 'rimi';
+$container['PROJECT'] = 'rimi';
 
-$h = fopen('rimi.vikis.lt.csv', 'a') or die('Cannot open csv file for writing');
+$h = fopen('rimi.fast.lt.csv', 'a') or die('Cannot open csv file for writing');
 
 /**
  * @var Arachne\Engine $engine
  */
 $engine = $container['scraper'];
-//$resource = HttpResource::fromUrl('https://www.rimi.lt/e-parduotuve/sitemaps/products/siteMap_rimiLtSite_Product_lt_1.xml',
-//    'sitemap');
-//$resource = HttpResource::fromUrl('https://www.rimi.lt/e-parduotuve/sitemaps/products/siteMap_rimiLtSite_Product_lt_2.xml',
-//    'sitemap');
-$resource = HttpResource::fromUrl('https://www.rimi.lt/e-parduotuve/sitemaps/products/siteMap_rimiLtSite_Product_lt_3.xml',
+$resource = HttpResource::fromUrl('https://www.rimi.lt/e-parduotuve/sitemaps/products/siteMap_rimiLtSite_Product_lt_1.xml',
     'sitemap');
-$resource2 = HttpResource::fromUrl('https://www.rimi.lt/e-parduotuve/lt/produktai/-vikis-prekiu-krautuvele/augaliniai-produktai/avizu-gerimas-avoo-750-ml/p/1365868]', 'product');
-$resource3 = HttpResource::fromUrl('https://www.rimi.lt/e-parduotuve/lt/produktai/-vikis-prekiu-krautuvele/augaliniai-produktai/avizu-gerimas-avoo-330-ml/p/1365867]', 'product');
+$resource2 = HttpResource::fromUrl('https://www.rimi.lt/e-parduotuve/sitemaps/products/siteMap_rimiLtSite_Product_lt_2.xml',
+    'sitemap');
+$resource3 = HttpResource::fromUrl('https://www.rimi.lt/e-parduotuve/sitemaps/products/siteMap_rimiLtSite_Product_lt_3.xml',
+    'sitemap');
 
-$engine->prepareEnv(Mode::RESUME, 'rimi')
+$engine->prepareEnv(Mode::RESUME)
     ->addHandlers(
         [
             'success:sitemap' => function (ResponseInterface $response, ResultSet $resultSet) use ($container) {
@@ -51,9 +50,7 @@ $engine->prepareEnv(Mode::RESUME, 'rimi')
 //                                return;
 //                            }
 //                        }
-                        if (false !== strpos($url, 'https://www.rimi.lt/e-parduotuve/lt/produktai') &&
-                        false !== strpos($url, '-vikis-prekiu-krautuvele')
-                        ) {
+                        if (false !== strpos($url, 'https://www.rimi.lt/e-parduotuve/lt/produktai')) {
                             $resultSet->addResource('product', $url);
                         }
                     });
@@ -121,8 +118,21 @@ $engine->prepareEnv(Mode::RESUME, 'rimi')
         ]
     )
     ->scrape(
-       // $resource
-         $resource2, $resource3
+        $resource, $resource2, $resource3
     )
 ;
 fclose($h);
+//https://www.rimi.lt/e-parduotuve/lt/produktai/namu-ukio-gyvunu-ir-laisvalaikio-prekes/virtuves-ir-stalo-serviravimo-reikmenys-/indai-/tauriu-kompl-schott-zwiesel-12vnt-aw21/p/7258439
+//https://www.rimi.lt/e-parduotuve/lt/produktai/namu-ukio-gyvunu-ir-laisvalaikio-prekes/trasos-ir-dirvozemio-misiniai/vazonelis-daiginimui-pro-garden-ss22/p/7258827
+//https://www.rimi.lt/e-parduotuve/lt/produktai/namu-ukio-gyvunu-ir-laisvalaikio-prekes/trasos-ir-dirvozemio-misiniai/daiginimo-vazoneliai-pro-garden-ss22/p/7258829
+//https://www.rimi.lt/e-parduotuve/lt/produktai/namu-ukio-gyvunu-ir-laisvalaikio-prekes/trasos-ir-dirvozemio-misiniai/daiginimo-vazoneliai-pro-garden-ss22/p/7258828
+//https://www.rimi.lt/e-parduotuve/lt/produktai/namu-ukio-gyvunu-ir-laisvalaikio-prekes/kaledines-prekes/girliandos/led-lemputes-100-led-keliu-spal-aw21/p/7257401
+//https://www.rimi.lt/e-parduotuve/lt/produktai/namu-ukio-gyvunu-ir-laisvalaikio-prekes/kaledines-prekes/girliandos/led-lemputes-40-led-keliu-spalvu-aw21/p/7257391
+//[https://www.rimi.lt/e-parduotuve/lt/produktai/namu-ukio-gyvunu-ir-laisvalaikio-prekes/kaledines-prekes/girliandos/led-lemputes-20-led-keliu-spalvu-aw21/p/7257392
+//https://www.rimi.lt/e-parduotuve/lt/produktai/namu-ukio-gyvunu-ir-laisvalaikio-prekes/kaledines-prekes/girliandos/led-lemputes-20-led-baltos-aw21/p/7257387
+//https://www.rimi.lt/e-parduotuve/lt/produktai/namu-ukio-gyvunu-ir-laisvalaikio-prekes/kaledines-prekes/girliandos/led-lemputes-40-led-geltonos-aw21/p/7257393
+//https://www.rimi.lt/e-parduotuve/lt/produktai/namu-ukio-gyvunu-ir-laisvalaikio-prekes/kaledines-prekes/girliandos/led-lemputes-20-led-geltonos-aw21/p/7257389
+//https://www.rimi.lt/e-parduotuve/lt/produktai/namu-ukio-gyvunu-ir-laisvalaikio-prekes/namu-apyvokos-reikmenys-/zvakes-ir-smilkalai/lekste-33cm-blizgios-sid-spalvos-aw21/p/7257554
+//https://www.rimi.lt/e-parduotuve/lt/produktai/namu-ukio-gyvunu-ir-laisvalaikio-prekes/namu-apyvokos-reikmenys-/zvakes-ir-smilkalai/lekste-33cm-blizgios-aukso-spalvos-aw21/p/7257561
+//https://www.rimi.lt/e-parduotuve/lt/produktai/namu-ukio-gyvunu-ir-laisvalaikio-prekes/namu-apyvokos-reikmenys-/zvakes-ir-smilkalai/lekste-33cm-blizgios-raudonos-spalvos/p/7257560
+//https://www.rimi.lt/e-parduotuve/lt/produktai/namu-ukio-gyvunu-ir-laisvalaikio-prekes/kaledines-prekes/girliandos/led-lemputes-100-led-baltos-aw21/p/7257378

@@ -108,6 +108,11 @@ abstract class Engine
                     $this->scheduler->schedule($failedResource);
                 }
             }
+            $frontier = $this->scheduler->getFrontier();
+            if ($frontier instanceof ShutdownAware) {
+                $this->logger->debug('Handling Frontier shutdown');
+                $frontier->onShutdown();
+            }
         });
     }
 

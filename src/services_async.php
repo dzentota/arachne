@@ -29,7 +29,7 @@ $container['httpClient'] = function ($c) {
     $stack->push(Middleware::retry($c['createRetryHandler']($logger), $c['createDelayHandler']($logger)));
 
     $client = new Client([
-        'handler' => $stack, //HandlerStack::create(),
+        'handler' => $stack,
         'connect_timeout' => $c['CONNECT_TIMEOUT'],
         'timeout' => $c['TIMEOUT'],
         'http_errors' => false,

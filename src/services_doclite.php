@@ -11,8 +11,11 @@ use Gebler\Doclite\FileDatabase;
 use Gebler\Doclite\MemoryDatabase;
 
 require __DIR__ . '/services.php';
+/**
+ * @var array $container
+ */
 
-$container['DOCLITE_DB'] = sys_get_temp_dir() . '/scraper.db';
+$container['DOCLITE_DB'] = $container['storage_dir'] . '/scraper.db';
 
 $container['frontier'] = function ($c) {
     $logger = $c['logger'];

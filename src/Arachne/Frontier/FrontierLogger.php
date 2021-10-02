@@ -2,13 +2,14 @@
 
 namespace Arachne\Frontier;
 
+use Arachne\ShutdownAware;
 use Psr\Log\LoggerInterface;
 
 /**
  * Class FrontierLogger
  * @package Arachne\Frontier
  */
-class FrontierLogger implements FrontierInterface
+class FrontierLogger implements FrontierInterface, ShutdownAware
 {
 
     /**
@@ -64,5 +65,12 @@ class FrontierLogger implements FrontierInterface
     {
         $this->logger->debug('Clearing Frontier');
         $this->frontier->clear();
+    }
+
+    public function onShutdown()
+    {
+        if ($this->frontier instanceof ShutdownAware) {
+            $this->frontier->onShutdown();
+        }
     }
 }

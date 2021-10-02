@@ -14,6 +14,22 @@ class InMemory implements FilterInterface
      * @var array
      */
     private $hash = [];
+    private string $storage;
+
+    public function __construct(?string $storage = null)
+    {
+        $this->storage = $storage?? sys_get_temp_dir();
+        if (file_exists($this->storage . '/arachne_filter.php')) {
+            $this->hash = require $this->storage . '/arachne_filter.php';
+        }
+        register_shutdown_function(function () {
+            if (!file_exists($this->storage)) {
+                mkdir($this->storage);
+            }
+            $data = '<?php return ' . var_export($this->hash, true) . ';';
+            file_put_contents($this->storage . '/arachne_filter.php', $data);
+        });
+    }
 
     /**
      * @param string $filterName
@@ -50,6 +66,9 @@ class InMemory implements FilterInterface
      */
     public function clear(string $filterName)
     {
+        if (file_exists($this->storage . '/arachne_filter.php')) {
+            @unlink($this->storage . '/arachne_filter.php');
+        }
         unset($this->hash[$filterName]);
     }
 

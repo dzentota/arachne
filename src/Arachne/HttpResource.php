@@ -69,7 +69,7 @@ class HttpResource implements \Serializable, Hashable
      */
     public function getHash() : string
     {
-        return sha1($this->serialize());
+        return sha1(Serializer::toString($this->getHttpRequest()));
     }
 
     /**

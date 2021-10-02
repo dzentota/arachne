@@ -16,7 +16,7 @@ require 'src/services_async.php';
 
 //$container['MONGO_DB_NAME'] = 'rimi';
 
-$h = fopen('rimi.async.lt.csv', 'a') or die('Cannot open csv file for writing');
+$h = fopen('rimi.vikis.lt.csv', 'a') or die('Cannot open csv file for writing');
 
 /**
  * @var Arachne\Engine $engine
@@ -28,7 +28,8 @@ $engine = $container['scraper'];
 //    'sitemap');
 $resource = HttpResource::fromUrl('https://www.rimi.lt/e-parduotuve/sitemaps/products/siteMap_rimiLtSite_Product_lt_3.xml',
     'sitemap');
-
+$resource2 = HttpResource::fromUrl('https://www.rimi.lt/e-parduotuve/lt/produktai/-vikis-prekiu-krautuvele/augaliniai-produktai/avizu-gerimas-avoo-750-ml/p/1365868]', 'product');
+$resource3 = HttpResource::fromUrl('https://www.rimi.lt/e-parduotuve/lt/produktai/-vikis-prekiu-krautuvele/augaliniai-produktai/avizu-gerimas-avoo-330-ml/p/1365867]', 'product');
 
 $engine->prepareEnv(Mode::RESUME, 'rimi')
     ->addHandlers(
@@ -50,7 +51,9 @@ $engine->prepareEnv(Mode::RESUME, 'rimi')
 //                                return;
 //                            }
 //                        }
-                        if (false !== strpos($url, 'https://www.rimi.lt/e-parduotuve/lt/produktai')) {
+                        if (false !== strpos($url, 'https://www.rimi.lt/e-parduotuve/lt/produktai') &&
+                        false !== strpos($url, '-vikis-prekiu-krautuvele')
+                        ) {
                             $resultSet->addResource('product', $url);
                         }
                     });
@@ -116,8 +119,10 @@ $engine->prepareEnv(Mode::RESUME, 'rimi')
                 fputcsv($h, $result, ';', '"', '"');
             }
         ]
-    )->scrape($resource
-//        , $resource2, $resource3
+    )
+    ->scrape(
+       // $resource
+         $resource2, $resource3
     )
 ;
 fclose($h);

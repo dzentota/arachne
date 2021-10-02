@@ -58,7 +58,6 @@ $container['logger'] = function ($c) {
 $container['frontier'] = function ($c) {
     $logger = $c['logger'];
     $frontier = new FrontierLogger(new InMemoryFrontier(new \SplPriorityQueue()), $logger);
-//    $frontier = new InMemoryFrontier(new \SplPriorityQueue());
     return $frontier;
 };
 

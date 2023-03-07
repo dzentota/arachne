@@ -6,6 +6,7 @@ use Arachne\Gateway\Gateway;
 use Arachne\Gateway\GatewayProfile;
 use Arachne\Gateway\GatewayServer;
 use Arachne\Identity\RoundRobinIdentityRotator;
+use Campo\UserAgent;
 use Gaufrette\Adapter\Local;
 use Gaufrette\Filesystem;
 use GuzzleHttp\Client;
@@ -18,6 +19,8 @@ use GuzzleHttp\Middleware;
 use Http\Message\MessageFactory\DiactorosMessageFactory;
 use Jmikola\WildcardEventDispatcher\WildcardEventDispatcher;
 use Monolog\Handler\StreamHandler;
+use Monolog\Level;
+use Monolog\Logger;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerInterface;
@@ -36,12 +39,11 @@ use Arachne\Identity\Identity;
 use Arachne\Scheduler;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Pimple\Container;
-use \Bramus\Monolog\Formatter\ColoredLineFormatter;
 
 $container = new Container();
 
 $container['HTTP_MAX_RETRIES'] = 4;
-$container['LOGGER_LEVEL'] = \Monolog\Logger::DEBUG;
+$container['LOGGER_LEVEL'] = Level::Debug;
 $container['CONNECT_TIMEOUT'] = 5;
 $container['TIMEOUT'] = 5;
 $container['MAX_REDIRECTS'] = 5;
@@ -49,9 +51,7 @@ $container['PROJECT'] = 'arachne';
 
 $container['logger'] = function ($c) {
     $stream = new StreamHandler('php://stderr', $c['LOGGER_LEVEL']);
-    $formatter = new ColoredLineFormatter();
-    $stream->setFormatter($formatter);
-    $logger = new \Monolog\Logger('Arachne');
+    $logger = new Logger('Arachne');
     $logger->pushHandler($stream);
     return $logger;
 };
@@ -72,7 +72,7 @@ $container['gatewayProfile'] = function ($c) {
 $container['identities'] = function ($c) {
     $gatewayServer = GatewayServer::localhost();
     $gateway = new Gateway($c['eventDispatcher'], $gatewayServer, $c['gatewayProfile']);
-    $defaultUserAgent = \Campo\UserAgent::random();
+    $defaultUserAgent = UserAgent::random();
     $identity = new Identity($gateway, $defaultUserAgent);
     return new IdentitiesCollection($identity);
 };
@@ -82,7 +82,7 @@ $container['identityRotator'] = function ($c) {
 };
 
 $container['documentStorage'] = function ($c) {
-    return new DocumentLogger(new InMemoryStorage(), $c['logger']);
+    return new DocumentLogger(new InMemoryStorage($c['storage_dir']), $c['logger']);
 };
 
 $container['filter'] = function ($c) {

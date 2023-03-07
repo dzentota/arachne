@@ -11,7 +11,23 @@ class InMemory implements DocumentInterface
     /**
      * @var array
      */
-    private $storage = [];
+    private array $documents = [];
+    private string $storage;
+
+    public function __construct(?string $storage = null)
+    {
+        $this->storage = $storage?? sys_get_temp_dir();
+        if (file_exists($this->storage . '/arachne_documents.php')) {
+            $this->documents = require $this->storage . '/arachne_documents.php';
+        }
+        register_shutdown_function(function () {
+            if (!file_exists($this->storage)) {
+                mkdir($this->storage);
+            }
+            $data = '<?php return ' . var_export($this->documents, true) . ';';
+            file_put_contents($this->storage . '/arachne_documents.php', $data);
+        });
+    }
 
     /**
      * @param string $type
@@ -24,7 +40,7 @@ class InMemory implements DocumentInterface
         if ($this->exists($type, $id)) {
             throw new \DomainException('Document already exists');
         }
-        $this->storage[$type][$id] = $data;
+        $this->documents[$type][$id] = $data;
     }
 
     /**
@@ -38,7 +54,7 @@ class InMemory implements DocumentInterface
         if (!$this->exists($type, $id)) {
             throw new \DomainException('Document does not exist');
         }
-        $this->storage[$type][$id] = array_replace_recursive($this->storage[$type][$id]??[], $data);
+        $this->documents[$type][$id] = array_replace_recursive($this->documents[$type][$id]??[], $data);
     }
 
     /**
@@ -51,7 +67,7 @@ class InMemory implements DocumentInterface
         if (!$this->exists($type, $id)) {
             return null;
         }
-        return $this->storage[$type][$id];
+        return $this->documents[$type][$id];
     }
 
     /**
@@ -64,7 +80,7 @@ class InMemory implements DocumentInterface
         if (!$this->exists($type, $id)) {
             throw new \DomainException('Document does not exist');
         }
-        unset($this->storage[$type][$id]);
+        unset($this->documents[$type][$id]);
     }
 
     /**
@@ -74,14 +90,14 @@ class InMemory implements DocumentInterface
     public function getIterator(string $type = null)
     {
         if (null !== $type) {
-            if (!empty($this->storage[$type])) {
-                return new \ArrayIterator($this->storage[$type]);
+            if (!empty($this->documents[$type])) {
+                return new \ArrayIterator($this->documents[$type]);
             } else {
                 return new \ArrayIterator([]);
             }
         } else {
             $storage = [];
-            foreach ($this->storage as $type => $data) {
+            foreach ($this->documents as $type => $data) {
                 foreach ($data as $id => $doc) {
                     $storage[$id] = $doc;
                 }
@@ -95,7 +111,10 @@ class InMemory implements DocumentInterface
      */
     public function clear()
     {
-        $this->storage = [];
+        if (file_exists($this->storage . '/arachne_documents.php')) {
+            @unlink($this->storage . '/arachne_documents.php');
+        }
+        $this->documents = [];
     }
 
     /**
@@ -105,10 +124,10 @@ class InMemory implements DocumentInterface
     public function count(string $type = null) : int
     {
         if (null !== $type) {
-            return count($this->storage[$type]);
+            return count($this->documents[$type]);
         }
         $count = 0;
-        foreach ($this->storage as $type => $data) {
+        foreach ($this->documents as $type => $data) {
             $count += count($data);
         }
         return $count;
@@ -119,7 +138,7 @@ class InMemory implements DocumentInterface
      */
     public function getTypes()
     {
-        return array_keys($this->storage);
+        return array_keys($this->documents);
     }
 
     /**
@@ -129,6 +148,6 @@ class InMemory implements DocumentInterface
      */
     public function exists(string $type, string $id)
     {
-        return isset($this->storage[$type][$id]);
+        return isset($this->documents[$type][$id]);
     }
 }

@@ -3,7 +3,7 @@ namespace  Arachne\Frontier\InMemory;
 
 class OrderedPriorityQueue extends \SplPriorityQueue
 {
-    protected $serial = PHP_INT_MAX;
+    protected int $serial = PHP_INT_MAX;
     /**
      * At this time, the documentation sais "Note: Multiple elements with the same priority will get dequeued
      * in no particular order."

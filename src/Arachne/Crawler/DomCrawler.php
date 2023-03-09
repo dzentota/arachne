@@ -1,12 +1,19 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Arachne\Crawler;
 use Symfony\Component\DomCrawler\Crawler;
 
 class DomCrawler extends GenericCrawler
 {
-    private $crawler;
+    private Crawler $crawler;
 
+    /**
+     * @param $node
+     * @param $currentUri
+     * @param $baseHref
+     */
     public function __construct($node = null, $currentUri = null, $baseHref = null)
     {
         $this->crawler = new Crawler($node, $currentUri, $baseHref);
@@ -15,10 +22,9 @@ class DomCrawler extends GenericCrawler
     public function setCrawler(Crawler $crawler)
     {
         $this->crawler = $crawler;
-
     }
 
-    public function getCrawler()
+    public function getCrawler(): Crawler
     {
         return $this->crawler;
     }
@@ -26,7 +32,7 @@ class DomCrawler extends GenericCrawler
     /**
      * Returns the first node of the current selection.
      */
-    public function first()
+    public function first(): NullCrawler|static
     {
         $first = $this->crawler->eq(0);
         if (!count($first)) {
@@ -40,7 +46,7 @@ class DomCrawler extends GenericCrawler
     /**
      * Returns the last node of the current selection.
      */
-    public function last()
+    public function last(): NullCrawler|static
     {
         $last = $this->crawler->eq(count($this->crawler) - 1);
         if (!count($last)) {
@@ -54,7 +60,7 @@ class DomCrawler extends GenericCrawler
     /**
      * Returns the siblings nodes of the current selection.
      */
-    public function siblings()
+    public function siblings(): NullCrawler|static
     {
         if (!count($this->crawler)) {
             return new NullCrawler();
@@ -68,7 +74,7 @@ class DomCrawler extends GenericCrawler
      * Returns the next siblings nodes of the current selection.
      *
      */
-    public function nextAll()
+    public function nextAll(): NullCrawler|static
     {
         if (!count($this->crawler)) {
             return new NullCrawler();
@@ -81,7 +87,7 @@ class DomCrawler extends GenericCrawler
     /**
      * Returns the previous sibling nodes of the current selection.
      */
-    public function previousAll()
+    public function previousAll(): NullCrawler|static
     {
         if (!count($this->crawler)) {
             return new NullCrawler();
@@ -91,7 +97,7 @@ class DomCrawler extends GenericCrawler
         return $crawler;
     }
 
-    public function eq($position)
+    public function eq($position): static
     {
         foreach ($this->crawler as $i => $node) {
             if ($i == $position) {
@@ -105,9 +111,8 @@ class DomCrawler extends GenericCrawler
      * Returns the parents nodes of the current selection.
      *
      */
-    public function parents()
+    public function parents(): NullCrawler|static
     {
-
         if (!count($this->crawler)) {
             return new NullCrawler();
         }
@@ -119,7 +124,7 @@ class DomCrawler extends GenericCrawler
     /**
      * Returns the children nodes of the current selection.
      */
-    public function children()
+    public function children(): NullCrawler|static
     {
         if (!count($this->crawler)) {
             return new NullCrawler();
@@ -135,7 +140,7 @@ class DomCrawler extends GenericCrawler
      * @param string $attribute The attribute name
      * @return null|NullCrawler|string
      */
-    public function attr($attribute)
+    public function attr($attribute): NullCrawler|string|null
     {
         if (!count($this->crawler)) {
             return null;
@@ -155,7 +160,7 @@ class DomCrawler extends GenericCrawler
     /**
      * Returns the node name of the first node of the list.
      */
-    public function nodeName()
+    public function nodeName(): ?string
     {
         if (!count($this->crawler)) {
             return null;
@@ -166,7 +171,7 @@ class DomCrawler extends GenericCrawler
     /**
      * Returns the node value of the first node of the list.
      */
-    public function text()
+    public function text(): ?string
     {
         if (!count($this->crawler)) {
             return null;
@@ -186,7 +191,7 @@ class DomCrawler extends GenericCrawler
     /**
      * Returns the first node of the list as HTML.
      */
-    public function html()
+    public function html(): ?string
     {
         if (!count($this->crawler)) {
             return null;
@@ -202,7 +207,7 @@ class DomCrawler extends GenericCrawler
         return new Value((string) $this->html());
     }
 
-    public function filter($selector)
+    public function filter($selector): NullCrawler|static
     {
         $result = $this->crawler->filter($selector);
         if (!count($result)) {
@@ -213,7 +218,7 @@ class DomCrawler extends GenericCrawler
         return $crawler;
     }
 
-    public function filterXPath($xpath)
+    public function filterXPath($xpath): NullCrawler|static
     {
         $result = $this->crawler->filterXPath($xpath);
         if (!count($result)) {
@@ -224,7 +229,7 @@ class DomCrawler extends GenericCrawler
         return $crawler;
     }
 
-    public function each(\Closure $closure)
+    public function each(\Closure $closure): array
     {
         $data = array();
         foreach ($this->crawler as $i => $node) {
@@ -242,7 +247,7 @@ class DomCrawler extends GenericCrawler
      *
      * @return self
      */
-    public function slice($offset = 0, $length = -1)
+    public function slice($offset = 0, $length = -1): static
     {
         return $this->createSubCrawler(iterator_to_array(new \LimitIterator($this->crawler, $offset, $length)));
     }
@@ -256,7 +261,7 @@ class DomCrawler extends GenericCrawler
      *
      * @return self
      */
-    public function reduce(\Closure $closure)
+    public function reduce(\Closure $closure): static
     {
         $nodes = array();
         foreach ($this->crawler as $i => $node) {
@@ -273,7 +278,7 @@ class DomCrawler extends GenericCrawler
         return call_user_func_array([$this->crawler, $name], $arguments);
     }
 
-    private function createSubCrawler($nodes)
+    private function createSubCrawler($nodes): static
     {
         $crawler = new static($nodes);
         return $crawler;
@@ -288,7 +293,7 @@ class DomCrawler extends GenericCrawler
      * The return value is cast to an integer.
      * @since 5.1.0
      */
-    public function count()
+    public function count(): int
     {
         return $this->crawler->count();
     }

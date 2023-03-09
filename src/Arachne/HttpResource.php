@@ -1,33 +1,29 @@
 <?php
+
 namespace Arachne;
 
 use Arachne\Hash\Hashable;
+use Arachne\MessageFactory\GuzzleMessageFactory;
+use Http\Message\RequestFactory;
+use JetBrains\PhpStorm\ArrayShape;
+use Laminas\Diactoros\Request;
+use Laminas\Diactoros\Request\Serializer;
 use Psr\Http\Message\RequestInterface;
-use Zend\Diactoros\Request;
-use Zend\Diactoros\Request\Serializer;
 
-class HttpResource implements \Serializable, Hashable
+class HttpResource implements Hashable, Serializable
 {
-
     /**
      * @var array
      */
-    private $meta = [];
-
-    /**
-     * @var string
-     */
-    private $type;
-
+    private array $meta = [];
     /**
      * @var RequestInterface
      */
     private $httpRequest;
 
-    public function __construct(RequestInterface $httpRequest, string $type)
+    public function __construct(RequestInterface $httpRequest, private string $type)
     {
-        $this->type = $type;
-        $request = $httpRequest->withRequestTarget((string) $httpRequest->getUri());
+        $request = $httpRequest->withRequestTarget((string)$httpRequest->getUri());
         $this->httpRequest = $request;
     }
 
@@ -36,21 +32,20 @@ class HttpResource implements \Serializable, Hashable
         return new static(new Request( $url, 'GET'), $type);
     }
 
-
     public function __sleep(): array
     {
         return [];
     }
 
-    public function getUrl() : string
+    public function getUrl(): string
     {
-        return (string) $this->httpRequest->getUri();
+        return (string)$this->httpRequest->getUri();
     }
 
     /**
      * @return RequestInterface
      */
-    public function getHttpRequest() : RequestInterface
+    public function getHttpRequest(): RequestInterface
     {
         return $this->httpRequest;
     }
@@ -58,7 +53,7 @@ class HttpResource implements \Serializable, Hashable
     /**
      * @return mixed
      */
-    public function getType() : string
+    public function getType(): string
     {
         return $this->type;
     }
@@ -67,7 +62,7 @@ class HttpResource implements \Serializable, Hashable
     /**
      * @return string
      */
-    public function getHash() : string
+    public function getHash(): string
     {
         return sha1(Serializer::toString($this->getHttpRequest()));
     }
@@ -102,7 +97,7 @@ class HttpResource implements \Serializable, Hashable
         if (null === $var) {
             return $this->meta;
         }
-        return isset($this->meta[$var])? $this->meta[$var] : $default;
+        return $this->meta[$var] ?? $default;
     }
 
     /**
@@ -114,41 +109,25 @@ class HttpResource implements \Serializable, Hashable
     public function __call($method, $params = [])
     {
         $result = call_user_func_array([$this->httpRequest, $method], $params);
-        if (0 === strpos($method, 'with')) {
+        if (str_starts_with($method, 'with')) {
             $this->httpRequest = $result;
             return $this;
         }
         return $result;
     }
 
-    /**
-     * (PHP 5 &gt;= 5.1.0)<br/>
-     * String representation of object
-     * @link http://php.net/manual/en/serializable.serialize.php
-     * @return string the string representation of the object or null
-     */
-    public function serialize()
+    #[ArrayShape(['meta' => "array", 'type' => "string", 'httpRequest' => "string"])] public function __serialize(
+    ): array
     {
-        $data = [
+        return [
             'meta' => $this->meta,
             'type' => $this->type,
             'httpRequest' => Serializer::toString($this->getHttpRequest())
         ];
-        return serialize($data);
     }
 
-    /**
-     * (PHP 5 &gt;= 5.1.0)<br/>
-     * Constructs the object
-     * @link http://php.net/manual/en/serializable.unserialize.php
-     * @param string $serialized <p>
-     * The string representation of the object.
-     * </p>
-     * @return void
-     */
-    public function unserialize($serialized)
+    public function __unserialize(array $data): void
     {
-        $data = unserialize($serialized, ['allowed_classes' => false]);
         $this->meta = $data['meta'];
         $this->type = $data['type'];
         //@todo make it more flexible

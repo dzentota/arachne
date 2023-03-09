@@ -7,15 +7,10 @@ use Arachne\Event\Event;
 
 class RequestPrepared extends Event
 {
-    private $request;
-    private $config;
-
     const name = 'client.request_prepared';
 
-    public function __construct(RequestInterface $request, array &$config)
+    public function __construct(private readonly RequestInterface $request, private readonly array $config)
     {
-        $this->request = $request;
-        $this->config = $config;
     }
 
     /**

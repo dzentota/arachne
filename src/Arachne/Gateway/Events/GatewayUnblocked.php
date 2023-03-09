@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace Arachne\Gateway\Events;
 
@@ -6,10 +7,8 @@ use Arachne\Event\EventSummaryInterface;
 
 class GatewayUnblocked extends GatewayEvent implements EventSummaryInterface
 {
-    const name = 'gateway.unblocked';
-
     public function getSummary(): string
     {
-        return sprintf('Gateway %s unblocked', (string) $this->getGatewayServer());
+        return sprintf('Gateway %s unblocked', $this->getGatewayServer());
     }
 }

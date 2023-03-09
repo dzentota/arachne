@@ -2,6 +2,7 @@
 
 namespace Arachne\Frontier;
 
+use Arachne\Serializable;
 use Gebler\Doclite\Collection;
 use Gebler\Doclite\Database;
 use Gebler\Doclite\Document;
@@ -20,7 +21,7 @@ class DocLite implements FrontierInterface
         $database->createIndex(self::COLLECTION, self::SEQUENCE, self::PRIORITY);
     }
 
-    public function populate(\Serializable $item, int $priority = self::PRIORITY_NORMAL)
+    public function populate(Serializable $item, int $priority = self::PRIORITY_NORMAL)
     {
         /**
          * @var Document $item

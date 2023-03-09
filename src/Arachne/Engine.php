@@ -7,6 +7,7 @@ use Arachne\Dumper\DumperInterface;
 use Arachne\Dumper\OutputStream;
 use Arachne\Identity\IdentityRotatorInterface;
 use Http\Message\RequestFactory;
+use JetBrains\PhpStorm\NoReturn;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerInterface;
 use Respect\Validation\Exceptions\NestedValidationException;
@@ -20,58 +21,16 @@ use Symfony\Component\EventDispatcher\EventDispatcherInterface;
  */
 abstract class Engine
 {
-    public $reschedulePreviouslyFailedResources = true;
-    public $shutdownOnException = false;
+    public bool $reschedulePreviouslyFailedResources = true;
+    public bool $shutdownOnException = false;
 
-    protected $failedResources = [];
-    /**
-     * @var ClientInterface
-     */
-    protected $client;
+    protected array $failedResources = [];
 
-    /**
-     * @var IdentityRotatorInterface
-     */
-    protected $identityRotator;
+    protected int $concurrency = 10;
 
-    /**
-     * @var Scheduler
-     */
-    protected $scheduler;
-
-    /**
-     * @var Document\Manager
-     */
-    protected $docManager;
-
-    /**
-     * @var LoggerInterface
-     */
-    protected $logger;
-
-    protected $requestFactory;
-
-    /**
-     * @var
-     */
-    protected $currentItem;
-
-    /**
-     * @var int
-     */
-    protected $concurrency = 10;
-
-    /**
-     * @var array
-     */
-    protected $handlers = [];
+    protected array $handlers = [];
 
     private DumperInterface $dumper;
-
-    /**
-     * @var EventDispatcherInterface
-     */
-    protected $eventDispatcher;
 
     /**
      * Arachne constructor.
@@ -81,23 +40,17 @@ abstract class Engine
      * @param Scheduler $scheduler
      * @param Document\Manager $docManager
      * @param RequestFactory $requestFactory
+     * @param EventDispatcherInterface $eventDispatcher
      */
     public function __construct(
-        LoggerInterface $logger,
-        ClientInterface $client,
-        IdentityRotatorInterface $identityRotator,
-        Scheduler $scheduler,
-        Document\Manager $docManager,
-        RequestFactory $requestFactory,
-        EventDispatcherInterface $eventDispatcher
+        protected LoggerInterface $logger,
+        protected ClientInterface $client,
+        protected IdentityRotatorInterface $identityRotator,
+        protected Scheduler $scheduler,
+        protected Document\Manager $docManager,
+        protected RequestFactory $requestFactory,
+        protected EventDispatcherInterface $eventDispatcher
     ) {
-        $this->logger = $logger;
-        $this->client = $client;
-        $this->identityRotator = $identityRotator;
-        $this->scheduler = $scheduler;
-        $this->docManager = $docManager;
-        $this->requestFactory = $requestFactory;
-        $this->eventDispatcher = $eventDispatcher;
         $this->onShutdown();
     }
 
@@ -135,12 +88,7 @@ abstract class Engine
         return $this;
     }
 
-    public function getCurrentItem()
-    {
-        return $this->currentItem;
-    }
-
-    public function setDumper(DumperInterface $dumper)
+    public function setDumper(DumperInterface $dumper): static
     {
         $this->dumper = $dumper;
         return $this;
@@ -155,7 +103,7 @@ abstract class Engine
         HttpResource $resource,
         ?ResponseInterface $response = null,
         ?\Exception $exception = null
-    ) {
+    ): void {
         if ($handler = $this->getExceptionHandler($resource->getType())) {
             try {
                 $handler($response, $resource, $exception);
@@ -175,7 +123,7 @@ abstract class Engine
      * @param string $type
      * @return null|callable
      */
-    protected function getExceptionHandler(string $type)
+    protected function getExceptionHandler(string $type): ?callable
     {
         return $this->handlers[$type]['exception'] ?? null;
     }
@@ -184,7 +132,7 @@ abstract class Engine
      * @param string $type
      * @return null|callable
      */
-    protected function getSuccessHandler(string $type)
+    protected function getSuccessHandler(string $type): ?callable
     {
         return $this->handlers[$type]['success'] ?? null;
     }
@@ -193,7 +141,7 @@ abstract class Engine
      * @param string $type
      * @return null|callable
      */
-    protected function getAlwaysHandler(string $type)
+    protected function getAlwaysHandler(string $type): ?callable
     {
         return $this->handlers[$type]['always'] ?? null;
     }
@@ -202,7 +150,7 @@ abstract class Engine
      * @param string $type
      * @return null|callable
      */
-    protected function getFailHandler(string $type)
+    protected function getFailHandler(string $type): ?callable
     {
         return $this->handlers[$type]['fail'] ?? null;
     }
@@ -225,7 +173,7 @@ abstract class Engine
      * @param HttpResource ...$resources
      * @return Engine
      */
-    public function scrape(HttpResource ...$resources)
+    public function scrape(HttpResource ...$resources): static
     {
         $this->schedule(...$resources);
         $this->run();
@@ -236,7 +184,7 @@ abstract class Engine
      * @param HttpResource ...$resources
      * @return Engine
      */
-    public function schedule(HttpResource ...$resources)
+    public function schedule(HttpResource ...$resources): static
     {
         foreach ($resources as $resource) {
             $this->scheduler->schedule($resource, FrontierInterface::PRIORITY_HIGH);
@@ -248,7 +196,7 @@ abstract class Engine
      * @param string ...$urls
      * @return $this
      */
-    public function scrapeUrls(string  ...$urls)
+    public function scrapeUrls(string  ...$urls): static
     {
         $this->scheduleUrls(...$urls);
         $this->run();
@@ -259,7 +207,7 @@ abstract class Engine
      * @param string ...$urls
      * @return $this
      */
-    public function scheduleUrls(string ...$urls)
+    public function scheduleUrls(string ...$urls): static
     {
         foreach ($urls as $url) {
             $resource = HttpResource::fromUrl($url);
@@ -268,10 +216,7 @@ abstract class Engine
         return $this;
     }
 
-    /**
-     *
-     */
-    protected function run()
+    protected function run(): void
     {
         do {
             $checkIfFrontierEmpty = false;
@@ -298,7 +243,7 @@ abstract class Engine
      * @param array $config
      * @return Engine
      */
-    public function addHandlers(array $config)
+    public function addHandlers(array $config): static
     {
         foreach ($config as $key => $value) {
             if (in_array($key, ['success', 'fail', 'always'])) {
@@ -327,7 +272,7 @@ abstract class Engine
     /**
      * @param $resultSet
      */
-    protected function scheduleNewResources(ResultSet $resultSet)
+    protected function scheduleNewResources(ResultSet $resultSet): void
     {
         foreach ($resultSet->getParsedResources() as $priority => $resData) {
             foreach ($resData as $newResource) {
@@ -339,7 +284,7 @@ abstract class Engine
     /**
      * @param ResultSet $resultSet
      */
-    protected function saveParsedItems($resultSet)
+    protected function saveParsedItems($resultSet): void
     {
         foreach ($resultSet->getItems() as $item) {
             /** @var Item $item */
@@ -360,7 +305,7 @@ abstract class Engine
      * @param $resultSet
      * @param $response
      */
-    protected function saveBlobs(HttpResource $resource, ResultSet $resultSet, string $content)
+    protected function saveBlobs(HttpResource $resource, ResultSet $resultSet, string $content): void
     {
         if ($resultSet->isBlob() || ($resource->getType() === 'blob')) {
             $blobsStorage = $this->docManager->getBlobsStorage();
@@ -388,7 +333,7 @@ abstract class Engine
         HttpResource $resource,
         ?ResponseInterface $response = null,
         \Exception $exception = null
-    ) {
+    ): void {
         if ($handler = $this->getFailHandler($resource->getType())) {
             try {
                 $handler($response, $resource, $exception);
@@ -403,7 +348,7 @@ abstract class Engine
         $this->shutdownOnException && $this->shutdown();
     }
 
-    protected function handleHttpSuccess(HttpResource $resource, ResponseInterface $response)
+    protected function handleHttpSuccess(HttpResource $resource, ResponseInterface $response): void
     {
         $resultSet = new ResultSet($resource, $this->requestFactory);
         if ($handler = $this->getSuccessHandler($resource->getType())) {
@@ -429,7 +374,7 @@ abstract class Engine
         }
     }
 
-    protected function handleAnyway(HttpResource $resource, ?ResponseInterface $response = null)
+    protected function handleAnyway(HttpResource $resource, ?ResponseInterface $response = null): void
     {
         if ($handler = $this->getAlwaysHandler($resource->getType())) {
             try {
@@ -443,7 +388,7 @@ abstract class Engine
         }
     }
 
-    public function shutdown()
+    #[NoReturn] public function shutdown()
     {
         $this->logger->debug('Shutting down');
         die();
@@ -453,7 +398,7 @@ abstract class Engine
      * @param $mode
      * @return Engine
      */
-    public function prepareEnv(string $mode = Mode::RESUME)
+    public function prepareEnv(string $mode = Mode::RESUME): static
     {
         if ($mode === Mode::RESUME) {
         }

@@ -2,6 +2,7 @@
 
 namespace Arachne\Frontier;
 
+use Arachne\Serializable;
 use Arachne\ShutdownAware;
 use Psr\Log\LoggerInterface;
 
@@ -33,11 +34,11 @@ class FrontierLogger implements FrontierInterface, ShutdownAware
     }
 
     /**
-     * @param \Serializable $item
+     * @param Serializable $item
      * @param int $priority
      * @return mixed
      */
-    public function populate(\Serializable $item, int $priority = self::PRIORITY_NORMAL)
+    public function populate(Serializable $item, int $priority = self::PRIORITY_NORMAL)
     {
         $this->logger->debug(
             sprintf(

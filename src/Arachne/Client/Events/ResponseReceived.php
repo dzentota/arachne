@@ -8,15 +8,8 @@ use Arachne\Event\Event;
 
 class ResponseReceived extends Event
 {
-    private $request;
-    private $response;
-
-    const name = 'client.response_received';
-
-    public function __construct(RequestInterface $request, ResponseInterface $response)
+    public function __construct(private readonly RequestInterface $request, private readonly ResponseInterface $response)
     {
-        $this->request = $request;
-        $this->response = $response;
     }
 
     /**

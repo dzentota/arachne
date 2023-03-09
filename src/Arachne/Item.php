@@ -4,7 +4,7 @@ namespace Arachne;
 
 use Respect\Validation\Validator as v;
 
-class Item implements \Serializable
+class Item implements Serializable
 {
     protected $id;
     protected $type = 'default';
@@ -84,35 +84,6 @@ class Item implements \Serializable
         return get_object_vars($this);
     }
 
-
-    /**
-     * String representation of object
-     * @link http://php.net/manual/en/serializable.serialize.php
-     * @return string the string representation of the object or null
-     * @since 5.1.0
-     */
-    public function serialize()
-    {
-        return serialize($this->asArray());
-    }
-
-    /**
-     * Constructs the object
-     * @link http://php.net/manual/en/serializable.unserialize.php
-     * @param string $serialized <p>
-     * The string representation of the object.
-     * </p>
-     * @return void
-     * @since 5.1.0
-     */
-    public function unserialize($serialized)
-    {
-        $data = unserialize($serialized);
-        foreach ($data as $key => $value) {
-            $this->$key = $value;
-        }
-    }
-
     public static function uuid()
     {
         $bytes = random_bytes(16);
@@ -135,4 +106,15 @@ class Item implements \Serializable
         );
     }
 
+    public function __serialize(): array
+    {
+        return $this->asArray();
+    }
+
+    public function __unserialize(array $data): void
+    {
+        foreach ($data as $key => $value) {
+            $this->$key = $value;
+        }
+    }
 }

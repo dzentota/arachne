@@ -2,9 +2,11 @@
 
 namespace Arachne\Hash;
 
+use Arachne\Serializable;
+
 class Hashed implements Hashable
 {
-    private $value;
+    private string $value;
 
     public static function fromString(string $string): Hashable
     {
@@ -13,10 +15,10 @@ class Hashed implements Hashable
         return $hashed;
     }
 
-    public static function fromObject(\Serializable $object): Hashable
+    public static function fromObject(Serializable $object): Hashable
     {
         $hashed = new self();
-        $hashed->value = (string) $object;
+        $hashed->value = serialize($object);
         return $hashed;
     }
 

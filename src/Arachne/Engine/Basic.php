@@ -8,6 +8,7 @@ use Arachne\Engine;
 use Arachne\Exceptions\NoGatewaysLeftException;
 use Arachne\Exceptions\ParsingResponseException;
 use Arachne\HttpResource;
+use Arachne\Response;
 use GuzzleHttp\Cookie\CookieJar;
 
 class Basic extends Engine
@@ -25,7 +26,7 @@ class Basic extends Engine
                             return ($param instanceof CookieJar) ? true : $param;
                         }, $config), true)));
                 $this->eventDispatcher->dispatch(new RequestPrepared($request, $config));
-                $response = $this->client->send($request, $config);
+                $response = new Response($this->client->send($request, $config), $request);
                 $this->eventDispatcher->dispatch(new ResponseReceived($resource->getHttpRequest(),
                     $response));
                 $this->identityRotator->evaluateResult($identity, $response);

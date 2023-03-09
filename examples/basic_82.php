@@ -1,18 +1,19 @@
 <?php
 require 'vendor/autoload.php';
 
-use Arachne\Crawler\DomCrawler;
 use Arachne\HttpResource;
 use Arachne\Item;
 use Arachne\Mode;
+use Arachne\Response;
 use Arachne\ResultSet;
-use Psr\Http\Message\ResponseInterface;
 use Respect\Validation\Validator as v;
+use Symfony\Component\DomCrawler\Crawler;
 
 ini_set('display_errors',1);
 error_reporting(E_ALL);
 require 'src/services.php';
 $container['PROJECT'] = 'basic_demo';
+//require 'src/services_parallel.php';
 require 'src/services_async.php';
 
 class NewsIntro extends Item
@@ -44,18 +45,16 @@ class NewsContent extends Item
  * @var Arachne\Engine\Parallel $scraper
  */
 $scraper = $container['scraper'];
-    $scraper->prepareEnv(Mode::CLEAR)
+$scraper->prepareEnv(Mode::CLEAR)
     ->addHandlers(
         [
-            'success:rss' => function (ResponseInterface $response, ResultSet $resultSet) use ($container) {
-                $content = (string) $response->getBody();
+            'success:rss' => function (Response $response, ResultSet $resultSet) use ($container) {
                 $data = [];
-                $crawler = new DomCrawler($content);
-                $crawler->filter('item')
-                ->reduce(function (DomCrawler $node, $i) {
-                    return $i < 3;
-                })
-                    ->each(function (DomCrawler $node) use (&$data) {
+                $response->filter('item')
+                    ->reduce(function (Crawler $node, $i) {
+                        return $i < 3;
+                    })
+                    ->each(function (Crawler $node) use (&$data) {
                         $data[] = [
                             'link' => $node->filter('link')->text(),
                             'title' => $node->filter('title')->text(),
@@ -73,15 +72,14 @@ $scraper = $container['scraper'];
                     $resultSet->addResource('image', $image, $item);
                 }
             },
-            'success:page' => function (ResponseInterface $response, ResultSet $resultSet) {
-                $content = (string)$response->getBody();
-                $content = (new DomCrawler($content))->filter('.news-text')->html();
+            'success:page' => function (Response $response, ResultSet $resultSet) {
+                $content = $response->filter('.news-text')->html();
                 $data = ['content' => $content];
                 $item = new NewsContent($data);
                 $resultSet->addItem($item);
             },
             //the same as build in 'blobs' handler
-            'success:image' => function (ResponseInterface $response, ResultSet $resultSet) {
+            'success:image' => function (Response $response, ResultSet $resultSet) {
                 $resultSet->markAsBlob();
             }
         ]

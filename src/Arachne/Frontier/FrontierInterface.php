@@ -2,6 +2,8 @@
 
 namespace Arachne\Frontier;
 
+use Arachne\Serializable;
+
 /**
  * Interface FrontierInterface
  * @package Arachne
@@ -18,11 +20,11 @@ interface FrontierInterface
     const PRIORITY_HIGH = 2;
 
     /**
-     * @param \Serializable $item
+     * @param Serializable $item
      * @param int $priority
      * @return mixed
      */
-    public function populate(\Serializable $item, int $priority = self::PRIORITY_NORMAL);
+    public function populate(Serializable $item, int $priority = self::PRIORITY_NORMAL);
 
     /**
      * @return \Serializable|null

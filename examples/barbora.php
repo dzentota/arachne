@@ -5,16 +5,14 @@ use Arachne\Crawler\DomCrawler;
 use Arachne\HttpResource;
 use Arachne\Mode;
 use Arachne\ResultSet;
+use Laminas\Diactoros\Request;
 use Psr\Http\Message\ResponseInterface;
-use Zend\Diactoros\Request;
 
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 require 'src/services.php';
+$container['PROJECT'] = 'basic_demo';
 require 'src/services_async.php';
-//require 'src/services_mongo.php';
-
-//$container['MONGO_DB_NAME'] = 'barbora';
 
 $h = fopen('barbora.rescan.csv', 'w') or die('Cannot open csv file for writing');
 

@@ -12,11 +12,9 @@ use Psr\Http\Message\ResponseInterface;
 
 class Guzzle implements \Arachne\Client\ClientInterface
 {
-    protected $httpClient;
 
-    public function __construct(ClientInterface $httpClient)
+    public function __construct(protected ClientInterface $httpClient)
     {
-        $this->httpClient = $httpClient;
     }
 
     /**

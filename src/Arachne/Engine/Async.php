@@ -8,10 +8,10 @@ use Arachne\Client\Events\ResponseReceived;
 use Arachne\Exceptions\NoGatewaysLeftException;
 use Arachne\Exceptions\ParsingResponseException;
 use Arachne\HttpResource;
-use GuzzleHttp\Cookie\CookieJar;
+use Arachne\Response;
 use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Promise\Utils;
 use Psr\Http\Message\ResponseInterface;
-use function GuzzleHttp\Promise\settle;
 
 class Async extends Engine
 {
@@ -26,15 +26,11 @@ class Async extends Engine
                     $identity = $this->identityRotator->switchIdentityFor($resource->getHttpRequest());
                     $config = $this->client->prepareConfig($identity);
                     $request = $resource->getHttpRequest();
-                    $this->logger->info('Loading resource from URL ' . $request->getUri());
-                    $this->logger->debug('Request config: ' . (empty($config) ? '<EMPTY>' : var_export(
-                            array_map(function ($param) {
-                                return ($param instanceof CookieJar) ? true : $param;
-                            }, $config), true)));
                     $this->eventDispatcher->dispatch(new RequestPrepared($request, $config));
                     yield $this->client->sendAsync($request, $config)
                         ->then(
-                            function (ResponseInterface $response) use ($resource, $identity) {
+                            function (ResponseInterface $httpResponse) use ($resource, $identity) {
+                                $response = new Response($httpResponse, $resource->getHttpRequest());
                                 $this->eventDispatcher->dispatch(new ResponseReceived($resource->getHttpRequest(), $response));
                                 $this->identityRotator->evaluateResult($identity, $response);
                                 $this->scheduler->markVisited($resource);
@@ -51,7 +47,8 @@ class Async extends Engine
                             },
                             function (RequestException $reason) use ($resource, $identity) {
                                 if (null !== $reason->getResponse()) {
-                                    $this->eventDispatcher->dispatch(new ResponseReceived($resource->getHttpRequest(), $reason->getResponse()));
+                                    $this->eventDispatcher->dispatch(new ResponseReceived($resource->getHttpRequest(),
+                                        $reason->getResponse()));
                                 }
                                 try {
                                     $this->identityRotator->evaluateResult($identity, null);
@@ -69,6 +66,6 @@ class Async extends Engine
             }
         })();
 
-        settle($requests)->wait();
+        Utils::settle($requests)->wait();
     }
 }

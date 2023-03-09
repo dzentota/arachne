@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace Arachne\Gateway\Events;
 
@@ -8,8 +9,7 @@ use Arachne\Gateway\GatewayServerInterface;
 
 class GatewayBlocked extends Event implements EventSummaryInterface
 {
-    private $gateway;
-    const name = 'gateway.blocked';
+    private GatewayServerInterface $gateway;
 
     public function __construct(GatewayServerInterface $gatewayServer)
     {
@@ -18,6 +18,6 @@ class GatewayBlocked extends Event implements EventSummaryInterface
 
     public function getSummary(): string
     {
-        return sprintf('Gateway %s blocked', (string) $this->gateway);
+        return sprintf('Gateway %s blocked', $this->gateway);
     }
 }

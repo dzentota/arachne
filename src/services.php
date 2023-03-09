@@ -6,6 +6,8 @@ use Arachne\Gateway\Gateway;
 use Arachne\Gateway\GatewayProfile;
 use Arachne\Gateway\GatewayServer;
 use Arachne\Identity\RoundRobinIdentityRotator;
+use Arachne\MessageFactory\GuzzleMessageFactory;
+use Arachne\Subscriber\LoggingSubscriber;
 use Campo\UserAgent;
 use Gaufrette\Adapter\Local;
 use Gaufrette\Filesystem;
@@ -16,7 +18,6 @@ use GuzzleHttp\Handler\CurlFactory;
 use GuzzleHttp\Handler\CurlHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Middleware;
-use Http\Message\MessageFactory\DiactorosMessageFactory;
 use Jmikola\WildcardEventDispatcher\WildcardEventDispatcher;
 use Monolog\Handler\StreamHandler;
 use Monolog\Level;
@@ -96,11 +97,11 @@ $container['documentManager'] = function ($c) {
 };
 
 $container['requestFactory'] = function ($c) {
-    return new DiactorosMessageFactory();
+    return new GuzzleMessageFactory();
 };
 
 $container['responseFactory'] = function ($c) {
-    return new DiactorosMessageFactory();
+    return new GuzzleMessageFactory();
 };
 
 $container['filesystem'] = function ($c) {
@@ -205,12 +206,7 @@ $container['httpClient'] = function ($c) {
 };
 
 $container['eventDispatcher'] = function ($c) {
-    $dispatcher = new WildcardEventDispatcher(new EventDispatcher());
-    $logger = $c['logger'];
-    $dispatcher->addListener('#', function(Event $event) use ($logger) {
-        if ($event instanceof EventSummaryInterface) {
-            $logger->debug($event->getSummary());
-        }
-    });
+    $dispatcher = new EventDispatcher();
+    $dispatcher->addSubscriber(new LoggingSubscriber($c['logger']));
     return $dispatcher;
 };

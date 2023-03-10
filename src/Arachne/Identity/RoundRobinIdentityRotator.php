@@ -7,27 +7,29 @@ use Psr\Http\Message\RequestInterface;
 
 class RoundRobinIdentityRotator extends IdentityRotator
 {
-    private $identitiesList;
-    private $currentRequest;
+    private \InfiniteIterator $identitiesList;
 
     public function __construct(IdentitiesCollection $identitiesCollection, callable $evaluationFunction = null)
     {
         parent::__construct($identitiesCollection, $evaluationFunction);
         $this->identitiesList = new \InfiniteIterator(
-            new class($identitiesCollection->getIterator()) extends \FilterIterator {
-                public $currentRequest;
+            iterator: new class($identitiesCollection->getIterator()) extends \FilterIterator {
+                public RequestInterface $currentRequest;
                 /**
                  * Check whether the current element of the iterator is acceptable
                  * @link http://php.net/manual/en/filteriterator.accept.php
                  * @return bool true if the current element is acceptable, otherwise false.
                  * @since 5.1.0
                  */
-                public function accept()
+                public function accept(): bool
                 {
                     /** @var Identity $currentIdentity */
                     $currentIdentity = parent::current();
                     $gateway = $currentIdentity->getGateway();
-                    return isset($this->currentRequest)? $gateway->isUsableFor($this->currentRequest) : true;
+                    if (isset($this->currentRequest)) {
+                        return $gateway->isUsableFor($this->currentRequest);
+                    }
+                    return true;
                 }
             }
         );
@@ -35,6 +37,11 @@ class RoundRobinIdentityRotator extends IdentityRotator
         $this->currentIdentity = $this->identitiesList->current();
     }
 
+    /**
+     * @param RequestInterface $request
+     * @return Identity
+     * @throws NoGatewaysLeftException
+     */
     public function switchIdentityFor(RequestInterface $request): Identity
     {
         $this->identitiesList->getInnerIterator()->currentRequest = $request;

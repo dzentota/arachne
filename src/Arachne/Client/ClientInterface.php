@@ -29,7 +29,7 @@ interface ClientInterface
     public function sendAsync(RequestInterface $request, array $options = []);
 
     /**
-     * @param $identity
+     * @param Identity|null $identity
      * @return array
      */
     public function prepareConfig(?Identity $identity = null): array;

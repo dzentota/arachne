@@ -18,7 +18,6 @@ use GuzzleHttp\Handler\CurlFactory;
 use GuzzleHttp\Handler\CurlHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Middleware;
-use Jmikola\WildcardEventDispatcher\WildcardEventDispatcher;
 use Monolog\Handler\StreamHandler;
 use Monolog\Level;
 use Monolog\Logger;
@@ -29,8 +28,6 @@ use Arachne\BlobsStorage\Gaufrette;
 use Arachne\Document\DocumentLogger;
 use Arachne\Document\InMemory as InMemoryStorage;
 use Arachne\Document\Manager;
-use Arachne\Event\Event;
-use Arachne\Event\EventSummaryInterface;
 use Arachne\Filter\FilterLogger;
 use Arachne\Filter\InMemory as InMemoryFilter;
 use Arachne\Frontier\FrontierLogger;
@@ -108,9 +105,13 @@ $container['filesystem'] = function ($c) {
     return new Filesystem(new Local($c['storage_dir'], true));
 };
 
+$container['client'] = function ($c) {
+    return new Guzzle($c['httpClient']);
+};
+
 $container['scraper'] = function ($c) {
     $logger = $c['logger'];
-    $client = new Guzzle($c['httpClient']);
+    $client = $c['client'];
     $identityRotator = $c['identityRotator'];
     $scheduler = $c['scheduler'];
     $docManager = $c['documentManager'];

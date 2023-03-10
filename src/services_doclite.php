@@ -8,7 +8,6 @@ use Arachne\Filter\FilterLogger;
 use Arachne\Filter\DocLite as DocLiteFilter;
 use Arachne\Frontier\DocLite as DocLiteFrontier;
 use Gebler\Doclite\FileDatabase;
-use Gebler\Doclite\MemoryDatabase;
 
 require __DIR__ . '/services.php';
 /**

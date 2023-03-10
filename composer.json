@@ -26,7 +26,8 @@
         "monolog/monolog": "^3.0",
         "ext-json": "*",
         "dwgebler/doclite": "dev-main",
-        "laminas/laminas-diactoros": "2.25.x-dev"
+        "laminas/laminas-diactoros": "2.25.x-dev",
+        "chrome-php/chrome": "1.8.x-dev"
     },
     "autoload": {
         "psr-0": {

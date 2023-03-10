@@ -3,8 +3,6 @@
 namespace Arachne;
 
 use Arachne\Hash\Hashable;
-use Arachne\MessageFactory\GuzzleMessageFactory;
-use Http\Message\RequestFactory;
 use JetBrains\PhpStorm\ArrayShape;
 use Laminas\Diactoros\Request;
 use Laminas\Diactoros\Request\Serializer;
@@ -19,7 +17,7 @@ class HttpResource implements Hashable, Serializable
     /**
      * @var RequestInterface
      */
-    private $httpRequest;
+    private RequestInterface $httpRequest;
 
     public function __construct(RequestInterface $httpRequest, private string $type)
     {

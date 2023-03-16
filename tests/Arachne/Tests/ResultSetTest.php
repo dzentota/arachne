@@ -2,11 +2,11 @@
 
 namespace Arachne\Tests;
 
-use Http\Message\MessageFactory\DiactorosMessageFactory;
 use Arachne\Frontier\FrontierInterface;
-use Arachne\Item;
 use Arachne\HttpResource;
+use Arachne\Item\Item;
 use Arachne\ResultSet;
+use Http\Message\MessageFactory\DiactorosMessageFactory;
 use Zend\Diactoros\Request;
 
 class ResultSetTest extends \PHPUnit_Framework_TestCase

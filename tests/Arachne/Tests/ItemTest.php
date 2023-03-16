@@ -1,7 +1,7 @@
 <?php
 
 namespace Arachne\Tests;
-use Arachne\Item;
+use Arachne\Item\Item;
 
 class ItemTest extends \PHPUnit_Framework_TestCase
 {

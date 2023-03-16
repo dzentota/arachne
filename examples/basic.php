@@ -3,17 +3,17 @@ require 'vendor/autoload.php';
 
 use Arachne\Crawler\DomCrawler;
 use Arachne\HttpResource;
-use Arachne\Item;
+use Arachne\Item\Item;
 use Arachne\Mode;
+use Arachne\Processor\Output;
 use Arachne\ResultSet;
 use Psr\Http\Message\ResponseInterface;
 use Respect\Validation\Validator as v;
 
 ini_set('display_errors',1);
 error_reporting(E_ALL);
-require 'src/services.php';
-$container['PROJECT'] = 'basic_demo';
 require 'src/services_async.php';
+$container['PROJECT'] = 'basic_demo';
 
 class NewsIntro extends Item
 {
@@ -80,11 +80,10 @@ $scraper = $container['scraper'];
                 $item = new NewsContent($data);
                 $resultSet->addItem($item);
             },
-            //the same as build in 'blobs' handler
             'success:image' => function (ResponseInterface $response, ResultSet $resultSet) {
-                $resultSet->markAsBlob();
+                $resultSet->addBlob($response->getBody());
             }
         ]
-    )->scrape(HttpResource::fromUrl('https://www.onliner.by/feed',  'rss'))
-    ->dumpDocuments()
-;
+    )
+        ->addProcessor(new Output())
+        ->scrape(HttpResource::fromUrl('https://www.onliner.by/feed',  'rss'));

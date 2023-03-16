@@ -2,9 +2,12 @@
 
 namespace Arachne;
 
-use Arachne\Hash\Hashable;
-use Http\Message\RequestFactory;
 use Arachne\Frontier\FrontierInterface;
+use Arachne\Hash\Hashable;
+use Arachne\Item\Item;
+use Arachne\Item\ItemInterface;
+use Http\Message\RequestFactory;
+use Psr\Http\Message\StreamInterface;
 
 /**
  * Class ResultSet
@@ -12,19 +15,20 @@ use Arachne\Frontier\FrontierInterface;
  */
 class ResultSet
 {
+    private StreamInterface $blob;
     /**
      * @var Hashable[]
      */
-    private $markedAsVisited = [];
+    private array $markedAsVisited = [];
     /**
      * @var \Arachne\HttpResource|HttpResource
      */
-    private $resource;
+    private HttpResource $resource;
 
     /**
      * @var RequestFactory
      */
-    private $requestFactory;
+    private RequestFactory $requestFactory;
 
     /**
      * @param HttpResource $resource
@@ -37,38 +41,45 @@ class ResultSet
     }
 
     /**
-     * @var array
+     * @var HttpResource[]
      */
-    private $newResources = [];
+    private array $newResources = [];
 
     /**
-     * @var array
+     * @var HttpResource[]
      */
-    private $relatedResources = [];
+    private array $relatedResources = [];
 
     /**
-     * @var array
+     * @var ItemInterface[]
      */
-    private $items = [];
+    private array $items = [];
 
     /**
      * @var bool
      */
-    private $isBlob = false;
+    private bool $isBlob = false;
 
     /**
      * @param $type
      * @param $url
-     * @param null $item
+     * @param ItemInterface|null $item
      * @param string $method
      * @param null $body
      * @param array $headers
+     * @param array $meta
      * @return $this
      */
-    public function addResource($type, $url, $item = null, $method = 'GET', $body = null, $headers = [], array $meta = [])
-    {
-        $this->addResourceWithPriority(FrontierInterface::PRIORITY_NORMAL, $type, $url, $item, $method, $body,
-            $headers, $meta);
+    public function addResource(
+        $type,
+        $url,
+        ItemInterface $item = null,
+        string $method = 'GET',
+        $body = null,
+        array $headers = [],
+        array $meta = []
+    ) {
+        $this->addResourceWithPriority(FrontierInterface::PRIORITY_NORMAL, $type, $url, $item, $method, $body, $headers, $meta);
         return $this;
     }
 
@@ -76,15 +87,24 @@ class ResultSet
     /**
      * @param $type
      * @param $url
-     * @param null $item
+     * @param ItemInterface|null $item
      * @param string $method
      * @param null $body
      * @param array $headers
+     * @param array $meta
      * @return $this
      */
-    public function addHighPriorityResource($type, $url, $item = null, $method = 'GET', $body = null, $headers = [], array $meta = [])
-    {
-        $this->addResourceWithPriority(FrontierInterface::PRIORITY_HIGH, $type, $url, $item, $method, $body, $headers, $meta);
+    public function addHighPriorityResource(
+        $type,
+        $url,
+        ItemInterface $item = null,
+        string $method = 'GET',
+        $body = null,
+        array $headers = [],
+        array $meta = []
+    ) {
+        $this->addResourceWithPriority(FrontierInterface::PRIORITY_HIGH, $type, $url, $item, $method, $body, $headers,
+            $meta);
         return $this;
     }
 
@@ -101,13 +121,13 @@ class ResultSet
         $priority,
         $type,
         $url,
-        $item = null,
-        $method = 'GET',
+        ItemInterface $item = null,
+        string $method = 'GET',
         $body = null,
         array $headers = [],
         array $meta = []
-    ) {
-        $httpRequest = $this->requestFactory->createRequest($method, $url, $headers, $body?? null)
+    ): static {
+        $httpRequest = $this->requestFactory->createRequest($method, $url, $headers, $body ?? null)
             ->withHeader('Referer', $this->resource->getUrl());
         $newResource = new HttpResource($httpRequest, $type);
         if (!empty($meta)) {
@@ -118,34 +138,39 @@ class ResultSet
         } else {
             $newResource->addMeta(
                 [
-                    'related_type' => $item->type,
-                    'related_id' => $item->id,
+                    'related_type' => $item->getType(),
+                    'related_id' => $item->getId(),
                     'related_url' => $this->resource->getUrl()
                 ]
             );
             $this->relatedResources[$priority][] = $newResource;
         }
+        return $this;
     }
 
     /**
      * @param HttpResource $newResource
-     * @param Item|null $item
+     * @param ItemInterface|null $item
      * @param int $priority
      */
-    public function addNewResource(HttpResource $newResource, Item $item = null, $priority = FrontierInterface::PRIORITY_NORMAL)
-    {
+    public function addNewResource(
+        HttpResource $newResource,
+        ItemInterface $item = null,
+        int $priority = FrontierInterface::PRIORITY_NORMAL
+    ): static {
         if (empty($item)) {
             $this->newResources[$priority][] = $newResource;
         } else {
             $newResource->addMeta(
                 [
-                    'related_type' => $item->type,
-                    'related_id' => $item->id,
+                    'related_type' => $item->getType(),
+                    'related_id' => $item->getId(),
                     'related_url' => $this->resource->getUrl()
                 ]
             );
             $this->relatedResources[$priority][] = $newResource;
         }
+        return $this;
     }
 
 
@@ -153,10 +178,10 @@ class ResultSet
      * @param Item $item
      * @return $this
      */
-    public function addItem(Item $item)
+    public function addItem(ItemInterface $item): static
     {
-        if ($item->type === $this->resource->getMeta('related_type')) {
-            $item->id = $this->resource->getMeta('related_id', $item->id);
+        if ($item->getType() === $this->resource->getMeta('related_type')) {
+            $item->setId($this->resource->getMeta('related_id', $item->getId()));
         }
         if ($item->validate()) {
             $this->items[] = $item;
@@ -185,10 +210,10 @@ class ResultSet
      */
     public function getParsedResources(): array
     {
-        $normalPriority = array_merge($this->newResources[FrontierInterface::PRIORITY_NORMAL]??[],
-            $this->relatedResources[FrontierInterface::PRIORITY_NORMAL]??[]);
-        $highPriority = array_merge($this->newResources[FrontierInterface::PRIORITY_HIGH]??[],
-            $this->relatedResources[FrontierInterface::PRIORITY_HIGH]??[]);
+        $normalPriority = array_merge($this->newResources[FrontierInterface::PRIORITY_NORMAL] ?? [],
+            $this->relatedResources[FrontierInterface::PRIORITY_NORMAL] ?? []);
+        $highPriority = array_merge($this->newResources[FrontierInterface::PRIORITY_HIGH] ?? [],
+            $this->relatedResources[FrontierInterface::PRIORITY_HIGH] ?? []);
         return [
             FrontierInterface::PRIORITY_NORMAL => $normalPriority,
             FrontierInterface::PRIORITY_HIGH => $highPriority
@@ -196,7 +221,7 @@ class ResultSet
     }
 
     /**
-     * @return array
+     * @return Item[]
      */
     public function getItems(): array
     {
@@ -204,31 +229,38 @@ class ResultSet
     }
 
     /**
-     * @return mixed
+     * @return bool
      */
     public function isBlob(): bool
     {
         return $this->isBlob;
     }
 
+    public function getBlob(): StreamInterface
+    {
+        return $this->blob;
+    }
+
     /**
+     * @param StreamInterface $stream
      * @return $this
      */
-    public function markAsBlob()
+    public function addBlob(StreamInterface $stream): static
     {
         $this->isBlob = true;
+        $this->blob = $stream;
         return $this;
     }
 
     /**
      * @return \Arachne\HttpResource|HttpResource
      */
-    public function getResource()
+    public function getResource(): HttpResource
     {
         return $this->resource;
     }
 
-    public function markVisited(Hashable $hashable)
+    public function markVisited(Hashable $hashable): void
     {
         $this->markedAsVisited[$hashable->getHash()] = $hashable;
     }

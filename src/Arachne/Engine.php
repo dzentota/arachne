@@ -3,11 +3,11 @@
 namespace Arachne;
 
 use Arachne\Client\ClientInterface;
-use Arachne\Dumper\DumperInterface;
-use Arachne\Dumper\OutputStream;
 use Arachne\Identity\IdentityRotatorInterface;
+use Arachne\Item\ItemInterface;
+use Arachne\PostProcessor\PostProcessorInterface;
+use Arachne\Processor\ProcessorInterface;
 use Http\Message\RequestFactory;
-use JetBrains\PhpStorm\NoReturn;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerInterface;
 use Respect\Validation\Exceptions\NestedValidationException;
@@ -29,8 +29,16 @@ abstract class Engine
     protected int $concurrency = 10;
 
     protected array $handlers = [];
+    /**
+     * @var ProcessorInterface[]
+     */
+    protected array $processors = [];
 
-    private DumperInterface $dumper;
+    /**
+     * @var PostProcessorInterface[]
+     */
+    protected array $postProcessors = [];
+
 
     /**
      * Arachne constructor.
@@ -38,7 +46,6 @@ abstract class Engine
      * @param ClientInterface $client
      * @param IdentityRotatorInterface $identityRotator
      * @param Scheduler $scheduler
-     * @param Document\Manager $docManager
      * @param RequestFactory $requestFactory
      * @param EventDispatcherInterface $eventDispatcher
      */
@@ -85,12 +92,6 @@ abstract class Engine
     public function setConcurrency(int $concurrency): self
     {
         $this->concurrency = $concurrency;
-        return $this;
-    }
-
-    public function setDumper(DumperInterface $dumper): static
-    {
-        $this->dumper = $dumper;
         return $this;
     }
 
@@ -153,19 +154,6 @@ abstract class Engine
     protected function getFailHandler(string $type): ?callable
     {
         return $this->handlers[$type]['fail'] ?? null;
-    }
-
-
-    /**
-     * @param null $type
-     * @return $this
-     */
-    public function dumpDocuments($type = null)
-    {
-        $documentsStorage = $this->docManager->getDocStorage();
-        $dumper = $this->dumper?? new OutputStream;
-        $dumper->dump($documentsStorage->getIterator($type));
-        return $this;
     }
 
 
@@ -237,6 +225,15 @@ abstract class Engine
             $batch && $this->process(...$batch);
         } while ($checkIfFrontierEmpty);
         $this->logger->debug('No more Items to process');
+        if (count($this->postProcessors)) {
+            $this->logger->debug('Starting data post processing');
+            $documentsStorage = $this->docManager->getDocStorage();
+            foreach ($documentsStorage->getIterator() as $document) {
+                foreach ($this->postProcessors as $postProcessor) {
+                    $document = $postProcessor->processData($document);
+                }
+            }
+        }
     }
 
     /**
@@ -264,7 +261,6 @@ abstract class Engine
                     }
                 }
             }
-
         }
         return $this;
     }
@@ -287,46 +283,64 @@ abstract class Engine
     protected function saveParsedItems($resultSet): void
     {
         foreach ($resultSet->getItems() as $item) {
-            /** @var Item $item */
+            /** @var ItemInterface $item */
 
-            if ($this->docManager->documentExists($item->type, $item->id)) {
+            if ($this->docManager->documentExists($item->getType(), $item->getId())) {
                 $this->docManager->updateDocument(
-                    $item->type, $item->id,
+                    $item->getType(), $item->getId(),
                     $item->asArray()
                 );
             } else {
-                $this->docManager->createDocument($item->type, $item->id, $item->asArray());
+                $this->docManager->createDocument($item->getType(), $item->getId(), $item->asArray());
             }
         }
     }
 
     /**
+     * @param ResultSet $resultSet
+     */
+    protected function saveBlobs(ResultSet $resultSet): void
+    {
+        if (!$resultSet->isBlob()) {
+            return;
+        }
+        $blobsStorage = $this->docManager->getBlobsStorage();
+        $resource = $resultSet->getResource();
+        $path = $blobsStorage->write($resource, (string) $resultSet->getBlob());
+        $this->logger->debug(sprintf('Saving blob resource [%s] to [%s]', $resource->getUrl(), $path));
+
+        if ($itemId = $resource->getMeta('related_id', null)) {
+            $itemType = $resource->getMeta('related_type');
+            $oldData = $this->docManager->getDocument($itemType, $itemId);
+            if (!empty($oldData)) {
+                $blobs = [];
+                if (isset($oldData['blobs'])) {
+                    $blobs = $oldData['blobs'];
+                }
+                $blobs[sha1($resource->getUrl())] = ['path' => $path, 'origUrl' => $resource->getUrl()];
+                $this->docManager->updateDocument(
+                    $itemType, $itemId,
+                    ['blobs' => $blobs]
+                );
+            }
+        }
+    }
+
+ /**
      * @param HttpResource $resource
      * @param $resultSet
      * @param $response
      */
-    protected function saveBlobs(HttpResource $resource, ResultSet $resultSet, string $content): void
+    public function addProcessor(ProcessorInterface $processor): static
     {
-        if ($resultSet->isBlob() || ($resource->getType() === 'blob')) {
-            $blobsStorage = $this->docManager->getBlobsStorage();
-            $path = $blobsStorage->write($resource, $content);
-            $this->logger->debug(sprintf('Saving blob resource [%s] to [%s]', $resource->getUrl(), $path));
-            if ($itemId = $resource->getMeta('related_id', null)) {
-                $itemType = $resource->getMeta('related_type');
-                $oldData = $this->docManager->getDocument($itemType, $itemId);
-                if (!empty($oldData)) {
-                    $blobs = [];
-                    if (isset($oldData['blobs'])) {
-                        $blobs = $oldData['blobs'];
-                    }
-                    $blobs[md5($resource->getUrl())] = ['path' => $path, 'origUrl' => $resource->getUrl()];
-                    $this->docManager->updateDocument(
-                        $itemType, $itemId,
-                        ['blobs' => $blobs]
-                    );
-                }
-            }
-        }
+        $this->processors[] = $processor;
+        return $this;
+    }
+
+    public function addPostProcessor(PostProcessorInterface $processor): static
+    {
+        $this->postProcessors[] = $processor;
+        return $this;
     }
 
     protected function handleHttpFail(
@@ -364,7 +378,10 @@ abstract class Engine
                 }
                 $this->scheduleNewResources($resultSet);
                 $this->saveParsedItems($resultSet);
-                $this->saveBlobs($resource, $resultSet, (string)$response->getBody());
+                $this->saveBlobs($resultSet);
+                foreach ($this->processors as $processor) {
+                    $resultSet = $processor->processResultSet($resultSet);
+                }
 
             } catch (NestedValidationException $exception) {
                 throw new ParsingResponseException($exception->getFullMessage(), 0, $exception);
@@ -388,7 +405,7 @@ abstract class Engine
         }
     }
 
-    #[NoReturn] public function shutdown()
+    public function shutdown()
     {
         $this->logger->debug('Shutting down');
         die();

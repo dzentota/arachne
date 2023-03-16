@@ -1,12 +1,12 @@
 <?php
+declare(strict_types=1);
 
 namespace Arachne\Parser;
 
 class Regex
 {
-    private $delimiters = '~';
-    private $modifiers = 'isu';
-    private $content;
+    private string $delimiters = '~';
+    private string $modifiers = 'isu';
 
     /**
      * @return string
@@ -18,10 +18,12 @@ class Regex
 
     /**
      * @param string $delimiters
+     * @return Regex
      */
-    public function setDelimeters(string $delimiters)
+    public function setDelimeters(string $delimiters): static
     {
         $this->delimiters = $delimiters;
+        return $this;
     }
 
     /**
@@ -34,15 +36,16 @@ class Regex
 
     /**
      * @param string $modifiers
+     * @return Regex
      */
-    public function setModifiers(string $modifiers)
+    public function setModifiers(string $modifiers): static
     {
         $this->modifiers = $modifiers;
+        return $this;
     }
 
-    public function __construct($content)
+    public function __construct(private readonly string $content)
     {
-        $this->content = $content;
     }
     
     public function match(string $regex, $subPatternName = 1)
@@ -55,7 +58,7 @@ class Regex
         return $this->evaluate($regex, $subPatternName, true);
     }
 
-    protected function evaluate(string $regex, $subPatternName, $matchAll = false )
+    protected function evaluate(string $regex, $subPatternName, $matchAll = false ): mixed
     {
         $rule = $this->delimiters . $regex . $this->delimiters . $this->modifiers;
         if ($matchAll) {

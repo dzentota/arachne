@@ -2,7 +2,7 @@
 require 'vendor/autoload.php';
 
 use Arachne\HttpResource;
-use Arachne\Item;
+use Arachne\Item\Item;
 use Arachne\Mode;
 use Arachne\Response;
 use Arachne\ResultSet;
